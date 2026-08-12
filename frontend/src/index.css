@@ -1,0 +1,207 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ─── HORMUUD UNIVERSITY EXACT LOGO COLOR PALETTE ──────────
+   Primary Blue  : #2175B5  (Exact Blue from Logo "H")
+   Primary Green : #0F7D4B  (Exact Green from Logo Banner & "J")
+   White         : #FFFFFF  (Exact White from Logo Shield)
+   ────────────────────────────────────────────────────────── */
+
+/* ─── LIGHT THEME (default) ────────────────────────────────── */
+:root,
+[data-theme="light"] {
+  --color-bg:        #F2F7FA;
+  --color-surface:   #FFFFFF;
+  --color-surface2:  #E6F4ED;
+  --color-border:    #CBE2EF;
+  --color-accent:    #2175B5;
+  --color-accent-hov:#1A5E92;
+  --color-accent2:   #0F7D4B;
+  --color-accent2-hov:#0C633B;
+  --color-text:      #0C2338;
+  --color-text-muted:#4B687F;
+  --color-text-soft: #234765;
+  --color-danger:    #DC2626;
+  --color-success:   #0F7D4B;
+  --color-warning:   #D97706;
+
+  /* Scrollbar */
+  --sb-track: #E6F0F6;
+  --sb-thumb: #8CBFE2;
+  --sb-thumb-hov: #2175B5;
+
+  /* Glass */
+  --glass-bg:     rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(33, 117, 181, 0.18);
+  --glass-lite-bg:rgba(230, 244, 237, 0.75);
+  --glass-lite-bd:rgba(15, 125, 75, 0.2);
+
+  /* Card */
+  --card-bg:     #FFFFFF;
+  --card-border: #D8E9F3;
+
+  /* Input */
+  --input-bg:    rgba(242, 247, 250, 0.9);
+  --input-text:  #0C2338;
+  --input-placeholder: #7B9BB3;
+  --input-border:#CBE2EF;
+
+  /* Navbar / Sidebar */
+  --nav-bg:      rgba(255, 255, 255, 0.95);
+  --nav-border:  #D8E9F3;
+  --sidebar-bg:  #FFFFFF;
+  --sidebar-text: #0C2338;
+  --sidebar-muted: #4B687F;
+}
+
+/* ─── DARK THEME ─────────────────────────────────────────── */
+[data-theme="dark"] {
+  --color-bg:        #061421;
+  --color-surface:   #0A1D2E;
+  --color-surface2:  #072418;
+  --color-border:    #163750;
+  --color-accent:    #2175B5;
+  --color-accent-hov:#1A5E92;
+  --color-accent2:   #139E5F;
+  --color-accent2-hov:#0F7D4B;
+  --color-text:      #E6F2FA;
+  --color-text-muted:#739CB9;
+  --color-text-soft: #9EC0D7;
+  --color-danger:    #F87171;
+  --color-success:   #2ED587;
+  --color-warning:   #FBBF24;
+
+  /* Scrollbar */
+  --sb-track: #0A1D2E;
+  --sb-thumb: #163750;
+  --sb-thumb-hov: #2175B5;
+
+  /* Glass */
+  --glass-bg:     rgba(10, 29, 46, 0.85);
+  --glass-border: rgba(33, 117, 181, 0.18);
+  --glass-lite-bg:rgba(7, 36, 24, 0.65);
+  --glass-lite-bd:rgba(19, 158, 95, 0.2);
+
+  /* Card */
+  --card-bg:     #0A1D2E;
+  --card-border: #163750;
+
+  /* Input */
+  --input-bg:    rgba(10, 29, 46, 0.85);
+  --input-text:  #E6F2FA;
+  --input-placeholder: #3D6888;
+  --input-border:#163750;
+
+  /* Navbar / Sidebar */
+  --nav-bg:      rgba(6, 20, 33, 0.92);
+  --nav-border:  #163750;
+  --sidebar-bg:  #061421;
+  --sidebar-text: #E6F2FA;
+  --sidebar-muted: rgba(230,242,250,0.6);
+}
+
+/* ─── BASE STYLES ───────────────────────────────────────── */
+html {
+  transition: color-scheme 0.2s;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* ─── SCROLLBAR ─────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--sb-track); }
+::-webkit-scrollbar-thumb { background: var(--sb-thumb); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--sb-thumb-hov); }
+
+/* ─── GLASS ─────────────────────────────────────────────── */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+}
+
+.glass-light {
+  background: var(--glass-lite-bg);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--glass-lite-bd);
+}
+
+/* ─── GRADIENT TEXT ─────────────────────────────────────── */
+.gradient-text {
+  background: linear-gradient(135deg, #2175B5, #0F7D4B);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── INPUT ─────────────────────────────────────────────── */
+.input-field {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 0.5rem;
+  color: var(--input-text);
+  font-size: 0.875rem;
+  transition: all 0.2s;
+  outline: none;
+}
+.input-field:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(33, 117, 181, 0.12);
+}
+.input-field::placeholder { color: var(--input-placeholder); }
+
+/* ─── CARD ───────────────────────────────────────────────── */
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+
+/* ─── THEME TOGGLE ANIMATION ────────────────────────────── */
+.theme-toggle-btn {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease;
+}
+.theme-toggle-btn:hover { transform: scale(1.05); }
+.theme-toggle-btn:active { transform: scale(0.95); }
+
+/* ─── SIDEBAR NAV ITEMS ─────────────────────────────────── */
+.active-nav-item {
+  background: rgba(33, 117, 181, 0.1) !important;
+  color: #2175B5 !important;
+  border: 1px solid rgba(33, 117, 181, 0.25) !important;
+  box-shadow: 0 2px 6px rgba(33, 117, 181, 0.08) !important;
+}
+
+[data-theme="dark"] .active-nav-item {
+  background: rgba(33, 117, 181, 0.22) !important;
+  color: #FFFFFF !important;
+  border: 1px solid rgba(33, 117, 181, 0.4) !important;
+}
+
+.inactive-nav-item {
+  color: var(--color-text-muted) !important;
+  border: 1px solid transparent !important;
+}
+
+.inactive-nav-item:hover {
+  background: rgba(33, 117, 181, 0.06) !important;
+  color: var(--color-text) !important;
+}
