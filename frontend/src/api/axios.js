@@ -9,16 +9,22 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Response interceptor
+// Response interceptor – guards against redirect loops on 401
+let _isRedirecting = false;
+export const resetRedirectFlag = () => { _isRedirecting = false; };
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     const isSessionCheck = error.config?.url?.includes('/auth/me');
-    const isAuthPage = ['/login', '/register', '/forgot-password'].includes(window.location.pathname);
+    const pathname = window.location.pathname;
+    const isAuthPage = ['/login', '/register', '/forgot-password'].some((p) =>
+      pathname === p || pathname.startsWith('/reset-password')
+    );
 
     // A 401 from the initial session check is expected when a visitor is not signed in.
-    // Redirecting here caused the login page to reload endlessly and eventually rate-limit itself.
-    if (error.response?.status === 401 && !isSessionCheck && !isAuthPage) {
+    // Guard against redirect loops: only redirect once, and never from auth pages.
+    if (error.response?.status === 401 && !isSessionCheck && !isAuthPage && !_isRedirecting) {
+      _isRedirecting = true;
       window.location.assign('/login');
     }
     return Promise.reject(error);

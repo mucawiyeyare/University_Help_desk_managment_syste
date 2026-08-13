@@ -69,7 +69,7 @@
   --color-accent-hov:#1A5E92;
   --color-accent2:   #139E5F;
   --color-accent2-hov:#0F7D4B;
-  --color-text:      #E6F2FA;
+  --color-text:      #FFFFFF;
   --color-text-muted:#739CB9;
   --color-text-soft: #9EC0D7;
   --color-danger:    #F87171;
@@ -101,8 +101,27 @@
   --nav-bg:      rgba(6, 20, 33, 0.92);
   --nav-border:  #163750;
   --sidebar-bg:  #061421;
-  --sidebar-text: #E6F2FA;
+  --sidebar-text: #FFFFFF;
   --sidebar-muted: rgba(230,242,250,0.6);
+}
+
+/* Keep every readable label high-contrast when dark mode is active. */
+[data-theme="dark"] :is(
+  div, h1, h2, h3, h4, h5, h6, p, span, a, label, legend, small,
+  strong, em, b, i, li, dt, dd, td, th, caption, button, input,
+  textarea, select, option
+) {
+  color: #FFFFFF !important;
+}
+
+[data-theme="dark"] :is(input, textarea)::placeholder {
+  color: rgba(255, 255, 255, 0.72) !important;
+  opacity: 1;
+}
+
+[data-theme="dark"] .gradient-text {
+  background: none;
+  -webkit-text-fill-color: #FFFFFF;
 }
 
 /* ─── BASE STYLES ───────────────────────────────────────── */

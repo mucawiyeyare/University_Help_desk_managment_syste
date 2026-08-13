@@ -96,14 +96,14 @@ export default function Login() {
               style={{
                 width: '100px',
                 height: '115px',
-                background: '#FFFFFF',
+                background: isDark ? 'transparent' : '#FFFFFF',
                 padding: '6px',
                 border: '1.5px solid rgba(15,125,75,0.25)',
                 boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
               }}
             >
               <img
-                src="/hormuud-logo.png"
+                src={isDark ? '/hormuud-logo-dark.png' : '/hormuud-logo.png'}
                 alt="Hormuud University Official Logo"
                 style={{ width: '100%', height: '100%', objectFit: 'contain' }}
               />
@@ -111,7 +111,7 @@ export default function Login() {
 
             <h1
               className="text-2xl font-extrabold tracking-tight"
-              style={{ color: isDark ? '#E8F4FF' : '#0D2844' }}
+              style={{ color: isDark ? '#FFFFFF' : '#0D2844' }}
             >
               Hormuud University
             </h1>

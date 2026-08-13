@@ -40,14 +40,14 @@ export default function TopNavbar({ onMenuClick }) {
             style={{
               width: '38px',
               height: '38px',
-              background: '#FFFFFF',
-              border: '1px solid var(--color-border)',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
+              background: isDark ? 'transparent' : '#FFFFFF',
+              border: isDark ? '1px solid transparent' : '1px solid var(--color-border)',
+              boxShadow: isDark ? 'none' : '0 2px 6px rgba(0,0,0,0.08)',
               padding: '2px',
             }}
           >
             <img
-              src="/hormuud-logo.png"
+              src={isDark ? '/hormuud-logo-dark.png' : '/hormuud-logo.png'}
               alt="HU Logo"
               style={{ width: '100%', height: '100%', objectFit: 'contain' }}
             />

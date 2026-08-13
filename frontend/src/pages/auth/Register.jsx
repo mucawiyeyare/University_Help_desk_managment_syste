@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { GraduationCap, Mail, Lock, User, ArrowRight, Sun, Moon } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const inputStyle = {
   background: 'var(--input-bg)',
@@ -26,9 +27,12 @@ export default function Register() {
     setLoading(true);
     try {
       await register(formData);
+      toast.success('Account created! Welcome to UHDMS.');
       navigate('/requester/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed');
+      const msg = err.response?.data?.message || 'Registration failed. Please try again.';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

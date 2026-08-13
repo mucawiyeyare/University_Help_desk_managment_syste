@@ -114,13 +114,13 @@ export default function Sidebar({ isOpen, setIsOpen }) {
             style={{
               width: '44px',
               height: '44px',
-              background: '#FFFFFF',
-              borderColor: 'var(--color-border)',
+              background: isDark ? 'transparent' : '#FFFFFF',
+              borderColor: isDark ? 'transparent' : 'var(--color-border)',
               padding: '2px',
             }}
           >
             <img
-              src="/hormuud-logo.png"
+              src={isDark ? '/hormuud-logo-dark.png' : '/hormuud-logo.png'}
               alt="Hormuud University Logo"
               style={{ width: '100%', height: '100%', objectFit: 'contain' }}
             />

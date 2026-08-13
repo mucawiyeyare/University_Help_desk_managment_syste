@@ -142,7 +142,22 @@ export default function TicketDetail() {
   };
 
   if (loading) return <Spinner fullScreen />;
-  if (!ticket) return <div className="p-8 text-center" style={{ color: 'var(--color-text-muted)' }}>Ticket not found</div>;
+  if (!ticket) return (
+    <div className="p-12 text-center max-w-lg mx-auto my-12 rounded-2xl border shadow-lg" style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
+      <Ticket className="w-12 h-12 mx-auto mb-3" style={{ color: '#2175B5' }} />
+      <h2 className="text-lg font-bold mb-1" style={{ color: 'var(--color-text)' }}>Ticket Not Found</h2>
+      <p className="text-xs mb-4" style={{ color: 'var(--color-text-muted)' }}>
+        The ticket record could not be loaded or may have been removed.
+      </p>
+      <button
+        onClick={() => navigate('/')}
+        className="px-5 py-2.5 text-white rounded-xl text-xs font-semibold shadow-md inline-flex items-center gap-2"
+        style={{ background: 'linear-gradient(135deg, #2175B5, #0F7D4B)' }}
+      >
+        <ArrowLeft className="w-4 h-4" /> Return to Dashboard
+      </button>
+    </div>
+  );
 
   return (
     <div className="space-y-6">

@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
-import api, { SOCKET_URL } from '../api/axios';
+import api, { SOCKET_URL, resetRedirectFlag } from '../api/axios';
 
 const AuthContext = createContext();
 
@@ -47,18 +47,18 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     const { data } = await api.post('/auth/login', credentials);
+    resetRedirectFlag();          // clear the guard so future 401s can redirect
     setUser(data.user);
     setIsAuthenticated(true);
-    
     connectSocket(data.user._id);
     return data;
   };
 
   const register = async (userData) => {
     const { data } = await api.post('/auth/register', userData);
+    resetRedirectFlag();          // clear the guard so future 401s can redirect
     setUser(data.user);
     setIsAuthenticated(true);
-    
     connectSocket(data.user._id);
     return data;
   };
