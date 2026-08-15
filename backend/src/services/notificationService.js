@@ -32,35 +32,44 @@ exports.createNotification = async ({ recipient, type, title, message, ticket })
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 🎫 TICKET CREATED — notify managers via in-app + Gmail
+// 1. TICKET CREATED
+//    - In-app notification to Admin & Department Manager
+//    - Email notification ONLY to Department Manager (NO email to Admin)
 // ═══════════════════════════════════════════════════════════════════════════════
 exports.notifyTicketCreated = async (ticket) => {
-  // 1. In-app notification for assigned agent (if any)
-  if (ticket.assignedAgent) {
-    await exports.createNotification({
-      recipient: getId(ticket.assignedAgent),
-      type: 'ticket_created',
-      title: 'New Ticket',
-      message: `Ticket ${ticket.ticketNumber} was created and assigned to you`,
-      ticket: ticket._id,
-    });
-  }
-
-  // 2. Fetch department managers with full profile (name + email)
-  const managers = await getDepartmentManagers(ticket.department);
-
-  // 3. Fetch requester full profile (need name, email, requesterType)
+  // Fetch requester full profile
   let requester = ticket.requester;
-  if (requester && !requester.requesterType) {
+  if (requester && (!requester.name || !requester.email)) {
     try {
       requester = await User.findById(getId(ticket.requester)).select('name email requesterType');
-    } catch (_) { /* use what we have */ }
+    } catch (_) {}
   }
 
-  // 4. For each manager: in-app notification + Gmail
+  // 1. In-app notification to System Admins (NO EMAIL)
+  try {
+    const admins = await User.find({ role: 'admin', isActive: true }).select('_id name email');
+    await Promise.all(
+      admins.map(async (admin) => {
+        await exports.createNotification({
+          recipient: admin._id,
+          type: 'ticket_created',
+          title: 'New Ticket Created',
+          message: `Ticket ${ticket.ticketNumber} was created by ${requester?.name || 'a user'}`,
+          ticket: ticket._id,
+        });
+      })
+    );
+  } catch (adminErr) {
+    console.error('[Notification] Failed to notify admins in-app:', adminErr.message);
+  }
+
+  // 2. Department manager lookup
+  const managers = await getDepartmentManagers(ticket.department);
+
+  // 3. In-app notification + Email ONLY to Department Managers
   await Promise.all(
     managers.map(async (manager) => {
-      // In-app notification
+      // In-app notification for Manager
       await exports.createNotification({
         recipient: manager._id,
         type: 'department_ticket_created',
@@ -69,10 +78,12 @@ exports.notifyTicketCreated = async (ticket) => {
         ticket: ticket._id,
       });
 
-      // Gmail notification to manager
+      // Email notification ONLY to Manager
       try {
-        await emailService.sendNewTicketToManager(ticket, manager, requester || {});
-        console.log(`[Email] New-ticket email sent to manager: ${manager.email}`);
+        if (manager.email) {
+          await emailService.sendNewTicketToManager(ticket, manager, requester || {});
+          console.log(`[Email] New-ticket email sent to manager: ${manager.email}`);
+        }
       } catch (emailErr) {
         console.error(`[Email] Failed to send new-ticket email to manager ${manager.email}:`, emailErr.message);
       }
@@ -81,13 +92,15 @@ exports.notifyTicketCreated = async (ticket) => {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 📋 TICKET ASSIGNED — notify agent via in-app + Gmail
+// 2. TICKET ASSIGNED TO AGENT
+//    - Automatically send Agent an email notification (with ticket info + link)
+//    - In-app notification for Agent
 // ═══════════════════════════════════════════════════════════════════════════════
 exports.notifyTicketAssigned = async (ticket, agent, previousAgent) => {
   const recipient = agent?._id || agent;
   const wasReassigned = previousAgent && !isSameUser(previousAgent, recipient);
 
-  // 1. In-app for new agent
+  // 1. In-app for assigned agent
   if (recipient) {
     await exports.createNotification({
       recipient,
@@ -99,19 +112,18 @@ exports.notifyTicketAssigned = async (ticket, agent, previousAgent) => {
       ticket: ticket._id,
     });
 
-    // 2. Gmail for new agent — fetch full agent record (name + email) if needed
+    // 2. Email notification to assigned agent
     try {
       let agentRecord = ticket.assignedAgent;
       if (!agentRecord?.email) {
         agentRecord = await User.findById(getId(recipient)).select('name email');
       }
 
-      // Fetch requester full profile for the "submitted by" field
       let requester = ticket.requester;
-      if (requester && !requester.requesterType) {
+      if (requester && (!requester.name || !requester.email)) {
         try {
           requester = await User.findById(getId(ticket.requester)).select('name email requesterType');
-        } catch (_) { /* use what we have */ }
+        } catch (_) {}
       }
 
       if (agentRecord?.email) {
@@ -123,7 +135,7 @@ exports.notifyTicketAssigned = async (ticket, agent, previousAgent) => {
     }
   }
 
-  // 3. In-app notification for previous agent (unassigned / reassigned)
+  // 3. In-app notification for previous agent (if reassigned)
   if (previousAgent && !isSameUser(previousAgent, recipient)) {
     await exports.createNotification({
       recipient: previousAgent,
@@ -138,9 +150,43 @@ exports.notifyTicketAssigned = async (ticket, agent, previousAgent) => {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Remaining notification helpers (this → exports fix applied throughout)
+// 3. TICKET RESOLVED
+//    - Automatically send email notification to Student (Requester)
+//    - In-app notification to Student
 // ═══════════════════════════════════════════════════════════════════════════════
+exports.notifyTicketResolved = async (ticket, actor) => {
+  const requesterId = getId(ticket.requester);
 
+  // 1. In-app notification to student
+  if (!isSameUser(ticket.requester, actor)) {
+    await exports.createNotification({
+      recipient: requesterId,
+      type: 'ticket_resolved',
+      title: 'Ticket Resolved',
+      message: `Ticket ${ticket.ticketNumber} has been resolved`,
+      ticket: ticket._id,
+    });
+  }
+
+  // 2. Email notification to student
+  try {
+    let requesterRecord = ticket.requester;
+    if (!requesterRecord?.email) {
+      requesterRecord = await User.findById(requesterId).select('name email');
+    }
+
+    if (requesterRecord?.email) {
+      await emailService.sendTicketResolvedToStudent(ticket, requesterRecord);
+      console.log(`[Email] Ticket resolved email sent to student: ${requesterRecord.email}`);
+    }
+  } catch (emailErr) {
+    console.error(`[Email] Failed to send ticket resolved email to student:`, emailErr.message);
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Other notification workflows
+// ═══════════════════════════════════════════════════════════════════════════════
 exports.notifyNewReply = async (ticket, author) => {
   const authorId = author?._id || author;
   const authorRole = author?.role;
@@ -166,17 +212,6 @@ exports.notifyStatusChanged = async (ticket, oldStatus, newStatus, actor) => {
     type: 'status_changed',
     title: 'Status Changed',
     message: `Ticket ${ticket.ticketNumber} status changed to ${newStatus}`,
-    ticket: ticket._id,
-  });
-};
-
-exports.notifyTicketResolved = async (ticket, actor) => {
-  if (isSameUser(ticket.requester, actor)) return null;
-  await exports.createNotification({
-    recipient: getId(ticket.requester),
-    type: 'ticket_resolved',
-    title: 'Ticket Resolved',
-    message: `Ticket ${ticket.ticketNumber} resolved`,
     ticket: ticket._id,
   });
 };
@@ -210,3 +245,4 @@ exports.notifySLAApproaching = async (ticket) => {
     )
   );
 };
+

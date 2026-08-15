@@ -117,6 +117,7 @@ exports.updateTicket = asyncHandler(async (req, res) => {
   const ticket = await Ticket.findById(req.params.id);
   if (!ticket || ticket.isDeleted) return res.status(404).json({ success: false, message: 'Ticket not found' });
   const oldStatus = ticket.status;
+  const oldAgent = ticket.assignedAgent;
   const allowedFields = ['priority', 'status', 'department', 'assignedAgent', 'category', 'subcategory', 'tags', 'location'];
   const historyEntries = [];
   for (const field of allowedFields) {
@@ -138,6 +139,11 @@ exports.updateTicket = asyncHandler(async (req, res) => {
   await ticket.save();
   if (historyEntries.length) await TicketHistory.insertMany(historyEntries);
   const updated = await Ticket.findById(ticket._id).populate('requester', 'name email').populate('category', 'name').populate('department', 'name').populate('assignedAgent', 'name email');
+  
+  if (req.body.assignedAgent !== undefined && String(oldAgent || '') !== String(updated.assignedAgent?._id || '')) {
+    await notificationService.notifyTicketAssigned(updated, updated.assignedAgent, oldAgent);
+  }
+
   if (oldStatus !== updated.status) {
     if (updated.status === 'resolved') {
       await notificationService.notifyTicketResolved(updated, req.user._id);
