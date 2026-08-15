@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   getTicketApi,
   getCommentsApi,
@@ -22,7 +22,6 @@ import Modal from '../../components/ui/Modal';
 import DocumentViewerModal from '../../components/ui/DocumentViewerModal';
 import {
   ArrowLeft,
-  Calendar,
   User,
   Building2,
   Paperclip,
@@ -31,8 +30,8 @@ import {
   Star,
   History,
   MessageSquare,
-  Shield,
-  Eye,
+  AlertCircle,
+  Ticket,
 } from 'lucide-react';
 
 export default function TicketDetail() {
@@ -45,6 +44,7 @@ export default function TicketDetail() {
   const [history, setHistory] = useState([]);
   const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [commentLoading, setCommentLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('conversation');
   const [previewAttachment, setPreviewAttachment] = useState(null);
@@ -56,11 +56,23 @@ export default function TicketDetail() {
 
   const isStaff = ['agent', 'manager', 'admin'].includes(user?.role);
   const isManagerOrAdmin = ['manager', 'admin'].includes(user?.role);
+  const ticketsPath = user?.role === 'admin'
+    ? '/admin/tickets'
+    : user?.role === 'manager'
+    ? '/manager/tickets'
+    : user?.role === 'agent'
+    ? '/agent/my-tickets'
+    : '/requester/tickets';
 
   const fetchTicketDetails = async () => {
+    setLoading(true);
+    setLoadError(null);
+    setTicket(null);
     try {
-      const [tRes, cRes] = await Promise.all([getTicketApi(id), getCommentsApi(id)]);
+      const tRes = await getTicketApi(id);
       if (tRes.data.success) setTicket(tRes.data.data);
+
+      const cRes = await getCommentsApi(id);
       if (cRes.data.success) setComments(cRes.data.data);
 
       if (isStaff) {
@@ -70,6 +82,10 @@ export default function TicketDetail() {
       }
     } catch (err) {
       console.error(err);
+      setLoadError({
+        status: err.response?.status,
+        message: err.response?.data?.message || 'The ticket could not be loaded.',
+      });
     } finally {
       setLoading(false);
     }
@@ -142,22 +158,33 @@ export default function TicketDetail() {
   };
 
   if (loading) return <Spinner fullScreen />;
-  if (!ticket) return (
-    <div className="p-12 text-center max-w-lg mx-auto my-12 rounded-2xl border shadow-lg" style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
-      <Ticket className="w-12 h-12 mx-auto mb-3" style={{ color: '#2175B5' }} />
-      <h2 className="text-lg font-bold mb-1" style={{ color: 'var(--color-text)' }}>Ticket Not Found</h2>
-      <p className="text-xs mb-4" style={{ color: 'var(--color-text-muted)' }}>
-        The ticket record could not be loaded or may have been removed.
-      </p>
-      <button
-        onClick={() => navigate('/')}
-        className="px-5 py-2.5 text-white rounded-xl text-xs font-semibold shadow-md inline-flex items-center gap-2"
-        style={{ background: 'linear-gradient(135deg, #2175B5, #0F7D4B)' }}
-      >
-        <ArrowLeft className="w-4 h-4" /> Return to Dashboard
-      </button>
-    </div>
-  );
+  if (!ticket) {
+    const isAccessDenied = loadError?.status === 403;
+    return (
+      <div className="p-12 text-center max-w-lg mx-auto my-12 rounded-2xl border shadow-lg" style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
+        {isAccessDenied ? (
+          <AlertCircle className="w-12 h-12 mx-auto mb-3" style={{ color: '#F59E0B' }} />
+        ) : (
+          <Ticket className="w-12 h-12 mx-auto mb-3" style={{ color: '#2175B5' }} />
+        )}
+        <h2 className="text-lg font-bold mb-1" style={{ color: 'var(--color-text)' }}>
+          {isAccessDenied ? 'Ticket Access Restricted' : 'Ticket Not Found'}
+        </h2>
+        <p className="text-xs mb-4" style={{ color: 'var(--color-text-muted)' }}>
+          {isAccessDenied
+            ? 'Requesters can open only their own tickets. Contact support if you need access to this request.'
+            : loadError?.message || 'The ticket record could not be loaded or may have been removed.'}
+        </p>
+        <button
+          onClick={() => navigate(ticketsPath)}
+          className="px-5 py-2.5 text-white rounded-xl text-xs font-semibold shadow-md inline-flex items-center gap-2"
+          style={{ background: 'linear-gradient(135deg, #2175B5, #0F7D4B)' }}
+        >
+          <ArrowLeft className="w-4 h-4" /> Return to Tickets
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

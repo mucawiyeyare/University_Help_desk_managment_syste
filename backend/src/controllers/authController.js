@@ -1,4 +1,6 @@
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 const User = require('../models/User');
 const AuditLog = require('../models/AuditLog');
 const { asyncHandler } = require('../utils/helpers');
@@ -67,11 +69,46 @@ exports.getMe = asyncHandler(async (req, res) => {
 // @route   PUT /api/auth/profile
 exports.updateProfile = asyncHandler(async (req, res) => {
   const { name, phone, requesterType } = req.body;
+  const updates = {};
+
+  if (name !== undefined) updates.name = name;
+  if (phone !== undefined) updates.phone = phone;
+  if (requesterType !== undefined) updates.requesterType = requesterType;
+
+  let avatarChanged = false;
+  if (req.file) {
+    updates.avatar = `/uploads/${req.file.filename}`;
+    avatarChanged = true;
+  } else if (Object.prototype.hasOwnProperty.call(req.body, 'avatar')) {
+    const avatar = String(req.body.avatar || '').trim();
+    if (avatar) {
+      try {
+        const avatarUrl = new URL(avatar);
+        if (!['http:', 'https:'].includes(avatarUrl.protocol)) throw new Error('Unsupported protocol');
+      } catch (error) {
+        return res.status(400).json({ success: false, message: 'Profile image link must be a valid HTTP or HTTPS URL.' });
+      }
+    }
+    updates.avatar = avatar;
+    avatarChanged = true;
+  }
+
+  const existingUser = await User.findById(req.user._id);
   const user = await User.findByIdAndUpdate(
     req.user._id,
-    { name, phone, requesterType },
+    updates,
     { new: true, runValidators: true }
   ).populate('department', 'name');
+
+  // Remove an old locally uploaded image once it is no longer the user's avatar.
+  if (avatarChanged && existingUser?.avatar?.startsWith('/uploads/') && existingUser.avatar !== user.avatar) {
+    const uploadDirectory = path.resolve(__dirname, '../../uploads');
+    const oldAvatarPath = path.resolve(uploadDirectory, path.basename(existingUser.avatar));
+    if (oldAvatarPath.startsWith(`${uploadDirectory}${path.sep}`)) {
+      fs.unlink(oldAvatarPath, () => {});
+    }
+  }
+
   res.json({ success: true, data: user });
 });
 

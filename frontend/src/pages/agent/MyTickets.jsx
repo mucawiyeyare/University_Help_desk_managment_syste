@@ -5,6 +5,7 @@ import Badge from '../../components/ui/Badge';
 import { Link } from 'react-router-dom';
 import { Ticket, Search, CheckCircle2, Clock, Eye, RefreshCw } from 'lucide-react';
 import Spinner from '../../components/ui/Spinner';
+import TicketSLAStatus, { getTicketSLAState } from '../../components/tickets/TicketSLAStatus';
 
 const STATUS_OPTIONS = [
   { value: 'new', label: 'New', color: '#94A3B8' },
@@ -44,9 +45,10 @@ export default function AgentMyTickets() {
   const handleStatusChange = async (ticketId, newStatus) => {
     setUpdating((prev) => ({ ...prev, [ticketId]: true }));
     try {
-      await updateTicketApi(ticketId, { status: newStatus });
+      const res = await updateTicketApi(ticketId, { status: newStatus });
+      const updatedTicket = res.data.data;
       setTickets((prev) =>
-        prev.map((t) => (t._id === ticketId ? { ...t, status: newStatus } : t))
+        prev.map((t) => (t._id === ticketId ? { ...t, ...updatedTicket } : t))
       );
     } catch (err) {
       alert('Failed to update status: ' + (err.response?.data?.message || err.message));
@@ -141,6 +143,7 @@ export default function AgentMyTickets() {
                   <th className="py-3.5 px-4">Subject</th>
                   <th className="py-3.5 px-4">Requester</th>
                   <th className="py-3.5 px-4">Priority</th>
+                  <th className="py-3.5 px-4">SLA</th>
                   <th className="py-3.5 px-4">Update Status</th>
                   <th className="py-3.5 px-4">Department</th>
                   <th className="py-3.5 px-4">Created</th>
@@ -148,14 +151,18 @@ export default function AgentMyTickets() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((t) => (
-                  <tr
-                    key={t._id}
-                    className="border-b transition-colors"
-                    style={{ borderColor: 'var(--color-border)' }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--color-surface2)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                  >
+                {filtered.map((t) => {
+                  const slaState = getTicketSLAState(t);
+                  const rowBackground = slaState?.rowBackground || 'transparent';
+                  const rowHoverBackground = slaState?.rowHoverBackground || 'var(--color-surface2)';
+                  return (
+                    <tr
+                      key={t._id}
+                      className="border-b transition-colors"
+                      style={{ borderColor: 'var(--color-border)', background: rowBackground }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = rowHoverBackground)}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = rowBackground)}
+                    >
                     <td className="py-3.5 px-4 font-mono font-semibold" style={{ color: 'var(--color-accent)' }}>
                       <Link to={`/tickets/${t._id}`} className="hover:underline">
                         {t.ticketNumber}
@@ -171,6 +178,9 @@ export default function AgentMyTickets() {
                     </td>
                     <td className="py-3.5 px-4">
                       <Badge type="priority" value={t.priority} />
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <TicketSLAStatus ticket={t} compact />
                     </td>
                     <td className="py-3.5 px-4">
                       <select
@@ -203,8 +213,9 @@ export default function AgentMyTickets() {
                         <Eye className="w-3.5 h-3.5" />
                       </Link>
                     </td>
-                  </tr>
-                ))}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

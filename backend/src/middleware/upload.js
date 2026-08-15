@@ -33,6 +33,17 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
+const avatarFileFilter = (req, file, cb) => {
+  const allowedImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+  if (allowedImageTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    const error = new Error('Invalid profile image. Please upload a JPG, PNG, WEBP, or GIF image.');
+    error.statusCode = 400;
+    cb(error, false);
+  }
+};
+
 const upload = multer({
   storage: storage,
   limits: { fileSize: parseInt(process.env.UPLOAD_MAX_SIZE || 5242880) },
@@ -43,5 +54,12 @@ upload.uploadFields = upload.fields([
   { name: 'attachments', maxCount: 5 },
   { name: 'avatar', maxCount: 1 },
 ]);
+
+// Profile images use a stricter image-only filter than ticket attachments.
+upload.avatar = multer({
+  storage,
+  limits: { fileSize: parseInt(process.env.UPLOAD_MAX_SIZE || 5242880) },
+  fileFilter: avatarFileFilter,
+}).single('avatar');
 
 module.exports = upload;

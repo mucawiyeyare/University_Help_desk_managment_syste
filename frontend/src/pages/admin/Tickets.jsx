@@ -3,6 +3,7 @@ import { getTicketsApi, deleteTicketApi, updateTicketApi, assignTicketApi } from
 import { getUsersApi } from '../../api/users';
 import { getDepartmentsApi } from '../../api/departments';
 import Badge from '../../components/ui/Badge';
+import TicketSLAStatus, { getTicketAssignmentState, getTicketSLAState } from '../../components/tickets/TicketSLAStatus';
 import Pagination from '../../components/ui/Pagination';
 import {
   Ticket,
@@ -207,6 +208,7 @@ export default function AdminTickets() {
                   <th className="py-3 px-4">Subject</th>
                   <th className="py-3 px-4">Requester</th>
                   <th className="py-3 px-4">Priority</th>
+                  <th className="py-3 px-4">SLA</th>
                   <th className="py-3 px-4">Status</th>
                   <th className="py-3 px-4">Assigned Agent</th>
                   <th className="py-3 px-4">Dept</th>
@@ -214,8 +216,19 @@ export default function AdminTickets() {
                 </tr>
               </thead>
               <tbody>
-                {tickets.map((t) => (
-                  <tr key={t._id} className="border-b transition-colors hover:bg-indigo-500/5" style={{ borderColor: 'var(--color-border)' }}>
+                {tickets.map((t) => {
+                  const slaState = getTicketSLAState(t);
+                  const assignmentState = getTicketAssignmentState(t);
+                  const rowBackground = slaState?.rowBackground || assignmentState?.rowBackground || 'transparent';
+                  const rowHoverBackground = slaState?.rowHoverBackground || assignmentState?.rowHoverBackground || 'rgba(99,102,241,0.05)';
+                  return (
+                  <tr
+                    key={t._id}
+                    className="border-b transition-colors"
+                    style={{ borderColor: 'var(--color-border)', background: rowBackground }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = rowHoverBackground)}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = rowBackground)}
+                  >
                     <td className="py-3 px-4 font-mono font-bold text-indigo-400">
                       <Link to={`/tickets/${t._id}`} className="hover:underline">{t.ticketNumber}</Link>
                     </td>
@@ -227,6 +240,9 @@ export default function AdminTickets() {
                     </td>
                     <td className="py-3 px-4">
                       <Badge type="priority" value={t.priority} />
+                    </td>
+                    <td className="py-3 px-4">
+                      <TicketSLAStatus ticket={t} compact />
                     </td>
                     <td className="py-3 px-4">
                       <select
@@ -247,7 +263,7 @@ export default function AdminTickets() {
                       {t.assignedAgent?.name ? (
                         <span className="text-emerald-400 font-medium">{t.assignedAgent.name}</span>
                       ) : (
-                        <span className="italic text-amber-500">Unassigned</span>
+                        <span className="italic text-rose-400 font-semibold">Unassigned</span>
                       )}
                     </td>
                     <td className="py-3 px-4 text-xs" style={{ color: 'var(--color-text-muted)' }}>
@@ -279,7 +295,8 @@ export default function AdminTickets() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

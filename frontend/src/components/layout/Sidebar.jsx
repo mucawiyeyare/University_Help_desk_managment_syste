@@ -2,24 +2,21 @@ import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import UserAvatar from '../ui/UserAvatar';
 import {
   LayoutDashboard,
   PlusCircle,
   Ticket,
-  BookOpen,
   Bell,
   Users,
   Building2,
   Layers,
   Clock,
-  Megaphone,
   BarChart3,
   MessageSquareHeart,
-  ShieldCheck,
   Settings,
   LogOut,
   UserCheck,
-  AlertTriangle,
   FolderOpen,
 } from 'lucide-react';
 
@@ -39,14 +36,13 @@ export default function Sidebar({ isOpen, setIsOpen }) {
     { label: 'Dashboard', path: '/requester/dashboard', icon: LayoutDashboard },
     { label: 'Create Ticket', path: '/requester/tickets/new', icon: PlusCircle },
     { label: 'My Tickets', path: '/requester/tickets', icon: Ticket },
-    { label: 'Knowledge Base', path: '/knowledge', icon: BookOpen },
     { label: 'Notifications', path: '/notifications', icon: Bell },
   ];
 
   const agentNav = [
     { label: 'Dashboard', path: '/agent/dashboard', icon: LayoutDashboard },
     { label: 'My Assigned Tickets', path: '/agent/my-tickets', icon: Ticket },
-    { label: 'Knowledge Base', path: '/knowledge', icon: BookOpen },
+    { label: 'My SLA Rank', path: '/agent/reports', icon: BarChart3 },
     { label: 'Notifications', path: '/notifications', icon: Bell },
   ];
 
@@ -54,8 +50,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
     { label: 'Dashboard', path: '/manager/dashboard', icon: LayoutDashboard },
     { label: 'Department Tickets', path: '/manager/tickets', icon: Ticket },
     { label: 'Unassigned Queue', path: '/manager/unassigned', icon: FolderOpen },
-    { label: 'Agent Workload', path: '/manager/agents', icon: UserCheck },
-    { label: 'Escalations', path: '/manager/escalations', icon: AlertTriangle },
+    { label: 'Agent', path: '/manager/agents', icon: UserCheck },
     { label: 'Reports', path: '/manager/reports', icon: BarChart3 },
     { label: 'Notifications', path: '/notifications', icon: Bell },
   ];
@@ -67,11 +62,8 @@ export default function Sidebar({ isOpen, setIsOpen }) {
     { label: 'Departments', path: '/admin/departments', icon: Building2 },
     { label: 'Categories', path: '/admin/categories', icon: Layers },
     { label: 'SLA Policies', path: '/admin/sla', icon: Clock },
-    { label: 'Knowledge Base', path: '/admin/knowledge', icon: BookOpen },
-    { label: 'Announcements', path: '/admin/announcements', icon: Megaphone },
     { label: 'Analytics & Reports', path: '/admin/reports', icon: BarChart3 },
     { label: 'User Feedback', path: '/admin/feedback', icon: MessageSquareHeart },
-    { label: 'Audit Logs', path: '/admin/audit-logs', icon: ShieldCheck },
     { label: 'System Settings', path: '/admin/settings', icon: Settings },
   ];
 
@@ -211,16 +203,12 @@ export default function Sidebar({ isOpen, setIsOpen }) {
           }}
         >
           <div className="flex items-center gap-2.5 overflow-hidden">
-            <div
-              className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm shrink-0"
-              style={{
-                background: 'linear-gradient(135deg, #2175B5, #0F7D4B)',
-                color: '#FFFFFF',
-                boxShadow: '0 2px 6px rgba(33,117,181,0.2)',
-              }}
-            >
-              {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
-            </div>
+            <UserAvatar
+              avatar={user?.avatar}
+              name={user?.name}
+              className="w-9 h-9 text-sm"
+              style={{ boxShadow: '0 2px 6px rgba(33,117,181,0.2)' }}
+            />
             <div className="truncate">
               <p
                 className="text-xs font-semibold truncate"

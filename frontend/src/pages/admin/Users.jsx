@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { getUsersApi, createUserApi, updateUserApi, deleteUserApi } from '../../api/users';
+import { getUsersApi, createUserApi, updateUserApi, setUserStatusApi, deleteUserApi } from '../../api/users';
 import { getDepartmentsApi } from '../../api/departments';
 import Modal from '../../components/ui/Modal';
 import Pagination from '../../components/ui/Pagination';
-import { Users, Plus, Edit2, Trash2, CheckCircle2, XCircle, Search, AlertCircle } from 'lucide-react';
+import { Users, Plus, Edit2, Trash2, CheckCircle2, XCircle, Search, AlertCircle, UserCheck, UserX } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../context/AuthContext';
 
-export default function UserManagement() {
+export default function UserManagement({ managerMode = false }) {
+  const { user: currentUser } = useAuth();
+  const emptyFormData = () => ({
+    name: '', email: '', password: '', role: managerMode ? 'agent' : 'requester', requesterType: 'student', department: '', phone: '',
+  });
   const [users, setUsers] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [pagination, setPagination] = useState(null);
@@ -17,19 +22,20 @@ export default function UserManagement() {
 
   const [showModal, setShowModal] = useState(false);
   const [editUser, setEditUser] = useState(null);
-  const [formData, setFormData] = useState({
-    name: '', email: '', password: '', role: 'requester', requesterType: 'student', department: '', phone: '',
-  });
+  const [formData, setFormData] = useState(emptyFormData);
 
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const [uRes, dRes] = await Promise.all([getUsersApi(filters), getDepartmentsApi()]);
+      const [uRes, dRes] = await Promise.all([
+        getUsersApi(managerMode ? { ...filters, role: 'agent' } : filters),
+        managerMode ? null : getDepartmentsApi(),
+      ]);
       if (uRes.data.success) {
         setUsers(uRes.data.data);
         setPagination(uRes.data.pagination);
       }
-      if (dRes.data.success) setDepartments(dRes.data.data);
+      if (dRes?.data.success) setDepartments(dRes.data.data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -44,7 +50,7 @@ export default function UserManagement() {
   const handleOpenCreate = () => {
     setEditUser(null);
     setErrorMsg('');
-    setFormData({ name: '', email: '', password: '', role: 'requester', requesterType: 'student', department: '', phone: '' });
+    setFormData(emptyFormData());
     setShowModal(true);
   };
 
@@ -55,7 +61,7 @@ export default function UserManagement() {
       name: user.name,
       email: user.email,
       password: '',
-      role: user.role,
+      role: managerMode ? 'agent' : user.role,
       requesterType: user.requesterType || 'student',
       department: user.department?._id || user.department || '',
       phone: user.phone || '',
@@ -68,21 +74,23 @@ export default function UserManagement() {
     setErrorMsg('');
     setSaving(true);
     try {
-      const payload = { ...formData };
-      if (!payload.department) delete payload.department;
+      const payload = managerMode
+        ? { name: formData.name, email: formData.email, password: formData.password, phone: formData.phone }
+        : { ...formData };
+      if (!managerMode && !payload.department && !editUser) delete payload.department;
 
       if (editUser) {
         if (!payload.password) delete payload.password;
         await updateUserApi(editUser._id, payload);
-        toast.success('User updated successfully');
+        toast.success(`${managerMode ? 'Agent' : 'User'} updated successfully`);
       } else {
         await createUserApi(payload);
-        toast.success('User created successfully');
+        toast.success(`${managerMode ? 'Agent' : 'User'} created successfully`);
       }
       setShowModal(false);
       fetchUsers();
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to save user account';
+      const msg = err.response?.data?.message || `Failed to save ${managerMode ? 'agent' : 'user'} account`;
       setErrorMsg(msg);
       toast.error(msg);
     } finally {
@@ -91,15 +99,30 @@ export default function UserManagement() {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Deactivate this user account?')) {
+    const accountType = managerMode ? 'agent' : 'user';
+    if (window.confirm(`Permanently delete this ${accountType} account? This cannot be undone.`)) {
       try {
         await deleteUserApi(id);
-        toast.success('User deactivated');
+        toast.success(`${managerMode ? 'Agent' : 'User'} permanently deleted`);
         fetchUsers();
       } catch (err) {
-        toast.error('Failed to deactivate user');
+        toast.error(err.response?.data?.message || `Failed to delete ${accountType}`);
         console.error(err);
       }
+    }
+  };
+
+  const handleStatusChange = async (user, isActive) => {
+    const action = isActive ? 'activate' : 'deactivate';
+    if (!window.confirm(`${action.charAt(0).toUpperCase()}${action.slice(1)} ${user.name}'s account?`)) return;
+
+    try {
+      await setUserStatusApi(user._id, isActive);
+      toast.success(`User ${isActive ? 'activated' : 'deactivated'}`);
+      fetchUsers();
+    } catch (err) {
+      toast.error(err.response?.data?.message || `Failed to ${action} user`);
+      console.error(err);
     }
   };
 
@@ -108,10 +131,10 @@ export default function UserManagement() {
       <div className="flex items-center justify-between pb-4" style={{ borderBottom: '1px solid var(--color-border)' }}>
         <div>
           <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: 'var(--color-text)' }}>
-            <Users className="w-5 h-5" style={{ color: '#2175B5' }} /> User Accounts & Access Control
+            <Users className="w-5 h-5" style={{ color: '#2175B5' }} /> {managerMode ? 'Department Agents' : 'User Accounts & Access Control'}
           </h2>
           <p className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>
-            Manage requesters, support agents, department managers, and system administrators.
+            {managerMode ? 'Create and manage support agents for your department.' : 'Manage requesters, support agents, department managers, and system administrators.'}
           </p>
         </div>
         <button
@@ -119,7 +142,7 @@ export default function UserManagement() {
           className="inline-flex items-center gap-1.5 px-4 py-2 text-white rounded-lg text-xs font-semibold shadow-md transition-all hover:shadow-lg"
           style={{ background: 'linear-gradient(135deg, #2175B5, #0F7D4B)' }}
         >
-          <Plus className="w-4 h-4" /> Add New User
+          <Plus className="w-4 h-4" /> Add New {managerMode ? 'Agent' : 'User'}
         </button>
       </div>
 
@@ -132,7 +155,7 @@ export default function UserManagement() {
               type="text"
               value={filters.search || ''}
               onChange={(e) => setFilters({ ...filters, search: e.target.value, page: 1 })}
-              placeholder="Search users by name, email, or role..."
+              placeholder={`Search ${managerMode ? 'agents' : 'users'} by name, email, or role...`}
               className="w-full rounded-lg pl-9 pr-3 py-1.5 text-xs outline-none transition-all"
               style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--input-text)' }}
             />
@@ -196,13 +219,41 @@ export default function UserManagement() {
                         </span>
                       )}
                     </td>
-                    <td className="py-3 px-4 text-right space-x-2">
-                      <button onClick={() => handleOpenEdit(u)} className="p-1.5 rounded-lg transition-colors hover:bg-slate-500/10" style={{ color: 'var(--color-text-muted)' }}>
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => handleDelete(u._id)} className="p-1.5 rounded-lg transition-colors hover:bg-rose-500/10 text-rose-500">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center justify-end gap-1">
+                        <button title="Edit user" aria-label={`Edit ${u.name}`} onClick={() => handleOpenEdit(u)} className="p-1.5 rounded-lg transition-colors hover:bg-slate-500/10" style={{ color: 'var(--color-text-muted)' }}>
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        {u.isActive ? (
+                          <button
+                            title={currentUser?._id === u._id ? 'You cannot deactivate your own account' : 'Deactivate user'}
+                            aria-label={`Deactivate ${u.name}`}
+                            disabled={currentUser?._id === u._id}
+                            onClick={() => handleStatusChange(u, false)}
+                            className="p-1.5 rounded-lg transition-colors text-amber-500 hover:bg-amber-500/10 disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            <UserX className="w-4 h-4" />
+                          </button>
+                        ) : (
+                          <button
+                            title="Activate user"
+                            aria-label={`Activate ${u.name}`}
+                            onClick={() => handleStatusChange(u, true)}
+                            className="p-1.5 rounded-lg transition-colors text-emerald-500 hover:bg-emerald-500/10"
+                          >
+                            <UserCheck className="w-4 h-4" />
+                          </button>
+                        )}
+                        <button
+                          title={currentUser?._id === u._id ? 'You cannot delete your own account' : 'Permanently delete user'}
+                          aria-label={`Delete ${u.name}`}
+                          disabled={currentUser?._id === u._id}
+                          onClick={() => handleDelete(u._id)}
+                          className="p-1.5 rounded-lg transition-colors hover:bg-rose-500/10 text-rose-500 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -214,7 +265,7 @@ export default function UserManagement() {
 
       <Pagination pagination={pagination} onPageChange={(page) => setFilters({ ...filters, page })} />
 
-      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editUser ? 'Edit User Account' : 'Create User Account'}>
+      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editUser ? `Edit ${managerMode ? 'Agent' : 'User'} Account` : `Create ${managerMode ? 'Agent' : 'User'} Account`}>
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
           {errorMsg && (
             <div
@@ -238,31 +289,49 @@ export default function UserManagement() {
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               className="input-field" placeholder="user@uhdms.edu" />
           </div>
-          {!editUser && (
-            <div>
-              <label className="block font-semibold mb-1" style={{ color: 'var(--color-text)' }}>Password</label>
-              <input type="password" required value={formData.password}
+          <div>
+              <label className="block font-semibold mb-1" style={{ color: 'var(--color-text)' }}>
+                Password {editUser && <span className="font-normal" style={{ color: 'var(--color-text-muted)' }}>(leave blank to keep current password)</span>}
+              </label>
+              <input type="password" required={!editUser} minLength={6} value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 className="input-field" placeholder="••••••••" />
-            </div>
+          </div>
+          {!managerMode && (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1" style={{ color: 'var(--color-text)' }}>System Role</label>
+                  <select value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })} className="input-field">
+                    <option value="requester">Requester (Student / Staff)</option>
+                    <option value="agent">Support Agent</option>
+                    <option value="manager">Department Manager</option>
+                    <option value="admin">Administrator</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1" style={{ color: 'var(--color-text)' }}>Department</label>
+                  <select value={formData.department} onChange={(e) => setFormData({ ...formData, department: e.target.value })} className="input-field">
+                    <option value="">None / General</option>
+                    {departments.map((d) => <option key={d._id} value={d._id}>{d.name}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block font-semibold mb-1" style={{ color: 'var(--color-text)' }}>Requester Type</label>
+                <select value={formData.requesterType} onChange={(e) => setFormData({ ...formData, requesterType: e.target.value })} className="input-field">
+                  <option value="student">Student</option>
+                  <option value="lecturer">Lecturer</option>
+                  <option value="staff">Staff</option>
+                  <option value="external">External User</option>
+                </select>
+              </div>
+            </>
           )}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block font-semibold mb-1" style={{ color: 'var(--color-text)' }}>System Role</label>
-              <select value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })} className="input-field">
-                <option value="requester">Requester (Student / Staff)</option>
-                <option value="agent">Support Agent</option>
-                <option value="manager">Department Manager</option>
-                <option value="admin">Administrator</option>
-              </select>
-            </div>
-            <div>
-              <label className="block font-semibold mb-1" style={{ color: 'var(--color-text)' }}>Department</label>
-              <select value={formData.department} onChange={(e) => setFormData({ ...formData, department: e.target.value })} className="input-field">
-                <option value="">None / General</option>
-                {departments.map((d) => <option key={d._id} value={d._id}>{d.name}</option>)}
-              </select>
-            </div>
+          <div>
+            <label className="block font-semibold mb-1" style={{ color: 'var(--color-text)' }}>Phone</label>
+            <input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              className="input-field" placeholder="+252 61 000 0000" />
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={() => setShowModal(false)}

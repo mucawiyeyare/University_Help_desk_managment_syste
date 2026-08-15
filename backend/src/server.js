@@ -11,6 +11,7 @@ const path = require('path');
 
 const connectDB = require('./config/db');
 const errorHandler = require('./middleware/errorHandler');
+const { startSLAMonitor } = require('./services/slaMonitorService');
 
 // Connect Database
 connectDB();
@@ -58,8 +59,6 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/departments', require('./routes/departments'));
 app.use('/api/categories', require('./routes/categories'));
 app.use('/api/sla', require('./routes/sla'));
-app.use('/api/knowledge', require('./routes/knowledge'));
-app.use('/api/announcements', require('./routes/announcements'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/feedback', require('./routes/feedback'));
@@ -74,5 +73,6 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
+  startSLAMonitor();
   console.log(`🚀 UHDMS Server running on port ${PORT} in ${process.env.NODE_ENV} mode`);
 });

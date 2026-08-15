@@ -9,6 +9,15 @@ const { applySLAToTicket } = require('../services/slaService');
 const notificationService = require('../services/notificationService');
 const { sendEmail } = require('../config/email');
 
+const TERMINAL_STATUSES = ['resolved', 'closed'];
+
+const setResolutionSLAOutcome = (ticket) => {
+  const completedAt = ticket.resolvedAt || ticket.closedAt;
+  if (ticket.slaDueResolution && completedAt) {
+    ticket.slaResolutionBreached = new Date(completedAt) > new Date(ticket.slaDueResolution);
+  }
+};
+
 // Build role-based ticket query
 const buildTicketQuery = (user, queryParams) => {
   const filter = { isDeleted: false };
@@ -22,7 +31,8 @@ const buildTicketQuery = (user, queryParams) => {
   if (queryParams.priority) filter.priority = queryParams.priority;
   if (queryParams.category) filter.category = queryParams.category;
   if (queryParams.department) filter.department = queryParams.department;
-  if (queryParams.assignedAgent) filter.assignedAgent = queryParams.assignedAgent;
+  if (queryParams.unassigned === 'true') filter.assignedAgent = null;
+  else if (queryParams.assignedAgent) filter.assignedAgent = queryParams.assignedAgent;
   if (queryParams.search) {
     filter.$or = [
       { subject: { $regex: queryParams.search, $options: 'i' } },
@@ -106,6 +116,7 @@ exports.getTicket = asyncHandler(async (req, res) => {
 exports.updateTicket = asyncHandler(async (req, res) => {
   const ticket = await Ticket.findById(req.params.id);
   if (!ticket || ticket.isDeleted) return res.status(404).json({ success: false, message: 'Ticket not found' });
+  const oldStatus = ticket.status;
   const allowedFields = ['priority', 'status', 'department', 'assignedAgent', 'category', 'subcategory', 'tags', 'location'];
   const historyEntries = [];
   for (const field of allowedFields) {
@@ -114,11 +125,27 @@ exports.updateTicket = asyncHandler(async (req, res) => {
       ticket[field] = req.body[field];
     }
   }
-  if (req.body.status === 'resolved' && !ticket.resolvedAt) ticket.resolvedAt = new Date();
-  if (req.body.status === 'closed' && !ticket.closedAt) ticket.closedAt = new Date();
+  if (ticket.status === 'resolved' && !ticket.resolvedAt) ticket.resolvedAt = new Date();
+  if (ticket.status === 'closed' && !ticket.closedAt) ticket.closedAt = new Date();
+  if (TERMINAL_STATUSES.includes(ticket.status)) setResolutionSLAOutcome(ticket);
+  if (ticket.status === 'reopened') {
+    ticket.resolvedAt = undefined;
+    ticket.closedAt = undefined;
+    ticket.slaResolutionBreached = false;
+    ticket.slaApproachingNotified = false;
+    ticket.slaBreachNotified = false;
+  }
   await ticket.save();
   if (historyEntries.length) await TicketHistory.insertMany(historyEntries);
   const updated = await Ticket.findById(ticket._id).populate('requester', 'name email').populate('category', 'name').populate('department', 'name').populate('assignedAgent', 'name email');
+  if (oldStatus !== updated.status) {
+    if (updated.status === 'resolved') {
+      await notificationService.notifyTicketResolved(updated, req.user._id);
+      if (updated.slaResolutionBreached) await notificationService.notifySLABreach(updated);
+    } else {
+      await notificationService.notifyStatusChanged(updated, oldStatus, updated.status, req.user._id);
+    }
+  }
   res.json({ success: true, data: updated });
 });
 
@@ -127,6 +154,9 @@ exports.updateTicket = asyncHandler(async (req, res) => {
 exports.addComment = asyncHandler(async (req, res) => {
   const ticket = await Ticket.findById(req.params.id).populate('requester', 'name email').populate('assignedAgent', 'name email');
   if (!ticket || ticket.isDeleted) return res.status(404).json({ success: false, message: 'Ticket not found' });
+  if (req.user.role === 'requester' && ticket.requester._id.toString() !== req.user._id.toString()) {
+    return res.status(403).json({ success: false, message: 'Not authorized to comment on this ticket' });
+  }
   const { body } = req.body;
   if (!body) return res.status(400).json({ success: false, message: 'Comment body is required' });
   let isInternal = false;
@@ -150,7 +180,10 @@ exports.addComment = asyncHandler(async (req, res) => {
 // @route GET /api/tickets/:id/comments
 exports.getComments = asyncHandler(async (req, res) => {
   const ticket = await Ticket.findById(req.params.id);
-  if (!ticket) return res.status(404).json({ success: false, message: 'Ticket not found' });
+  if (!ticket || ticket.isDeleted) return res.status(404).json({ success: false, message: 'Ticket not found' });
+  if (req.user.role === 'requester' && ticket.requester.toString() !== req.user._id.toString()) {
+    return res.status(403).json({ success: false, message: 'Not authorized to view comments for this ticket' });
+  }
   const filter = { ticket: req.params.id };
   if (req.user.role === 'requester') filter.isInternal = false;
   const comments = await TicketComment.find(filter).populate('author', 'name email role avatar').sort('createdAt');
@@ -167,18 +200,21 @@ exports.getHistory = asyncHandler(async (req, res) => {
 // @desc  Assign ticket
 // @route POST /api/tickets/:id/assign
 exports.assignTicket = asyncHandler(async (req, res) => {
-  const { agentId, departmentId } = req.body;
+  const agentId = req.body.agentId ?? req.body.assignedAgent;
+  const departmentId = req.body.departmentId ?? req.body.department;
   const ticket = await Ticket.findById(req.params.id);
   if (!ticket) return res.status(404).json({ success: false, message: 'Ticket not found' });
   const oldAgent = ticket.assignedAgent;
-  const oldDept = ticket.department;
-  if (agentId) ticket.assignedAgent = agentId;
-  if (departmentId) ticket.department = departmentId;
-  if (ticket.status === 'new') ticket.status = 'assigned';
+  const oldStatus = ticket.status;
+  if (agentId !== undefined) ticket.assignedAgent = agentId || undefined;
+  if (departmentId !== undefined) ticket.department = departmentId || undefined;
+  if (ticket.status === 'new' && ticket.assignedAgent) ticket.status = 'assigned';
+  if (ticket.status === 'assigned' && !ticket.assignedAgent) ticket.status = 'new';
   await ticket.save();
-  await TicketHistory.create({ ticket: ticket._id, changedBy: req.user._id, action: 'assigned', oldValue: String(oldAgent || ''), newValue: String(agentId || ''), note: `Assigned to agent` });
+  await TicketHistory.create({ ticket: ticket._id, changedBy: req.user._id, action: 'assigned', oldValue: String(oldAgent || ''), newValue: String(ticket.assignedAgent || ''), note: ticket.assignedAgent ? 'Assigned to agent' : 'Agent assignment removed' });
   const updated = await Ticket.findById(ticket._id).populate('requester', 'name email').populate('department', 'name').populate('assignedAgent', 'name email');
-  await notificationService.notifyTicketAssigned(updated, agentId);
+  await notificationService.notifyTicketAssigned(updated, ticket.assignedAgent, oldAgent);
+  if (oldStatus !== updated.status) await notificationService.notifyStatusChanged(updated, oldStatus, updated.status, req.user._id);
   res.json({ success: true, data: updated });
 });
 
@@ -204,9 +240,11 @@ exports.resolveTicket = asyncHandler(async (req, res) => {
   ticket.status = 'resolved';
   ticket.resolvedAt = new Date();
   ticket.resolutionSummary = req.body.resolutionSummary || '';
+  setResolutionSLAOutcome(ticket);
   await ticket.save();
   await TicketHistory.create({ ticket: ticket._id, changedBy: req.user._id, action: 'resolved', note: req.body.resolutionSummary || 'Ticket resolved' });
-  await notificationService.notifyTicketResolved(ticket);
+  await notificationService.notifyTicketResolved(ticket, req.user._id);
+  if (ticket.slaResolutionBreached) await notificationService.notifySLABreach(ticket);
   res.json({ success: true, data: ticket });
 });
 
@@ -215,11 +253,15 @@ exports.resolveTicket = asyncHandler(async (req, res) => {
 exports.closeTicket = asyncHandler(async (req, res) => {
   const ticket = await Ticket.findById(req.params.id);
   if (!ticket) return res.status(404).json({ success: false, message: 'Ticket not found' });
+  const oldStatus = ticket.status;
   ticket.status = 'closed';
   ticket.closedAt = new Date();
+  setResolutionSLAOutcome(ticket);
   await ticket.save();
   await TicketHistory.create({ ticket: ticket._id, changedBy: req.user._id, action: 'closed', note: 'Ticket closed' });
-  res.json({ success: true, data: ticket });
+  const updated = await Ticket.findById(ticket._id).populate('requester', 'name email').populate('department', 'name').populate('assignedAgent', 'name email');
+  await notificationService.notifyStatusChanged(updated, oldStatus, updated.status, req.user._id);
+  res.json({ success: true, data: updated });
 });
 
 // @desc  Reopen ticket
@@ -227,11 +269,18 @@ exports.closeTicket = asyncHandler(async (req, res) => {
 exports.reopenTicket = asyncHandler(async (req, res) => {
   const ticket = await Ticket.findById(req.params.id);
   if (!ticket) return res.status(404).json({ success: false, message: 'Ticket not found' });
+  const oldStatus = ticket.status;
   ticket.status = 'reopened';
   ticket.resolvedAt = undefined;
+  ticket.closedAt = undefined;
+  ticket.slaResolutionBreached = false;
+  ticket.slaApproachingNotified = false;
+  ticket.slaBreachNotified = false;
   await ticket.save();
   await TicketHistory.create({ ticket: ticket._id, changedBy: req.user._id, action: 'reopened', note: req.body.reason || 'Ticket reopened' });
-  res.json({ success: true, data: ticket });
+  const updated = await Ticket.findById(ticket._id).populate('requester', 'name email').populate('department', 'name').populate('assignedAgent', 'name email');
+  await notificationService.notifyStatusChanged(updated, oldStatus, updated.status, req.user._id);
+  res.json({ success: true, data: updated });
 });
 
 // @desc  Delete ticket (soft)

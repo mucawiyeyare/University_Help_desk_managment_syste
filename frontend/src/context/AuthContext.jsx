@@ -75,7 +75,10 @@ export const AuthProvider = ({ children }) => {
   };
 
   const updateProfile = async (userData) => {
-    const { data } = await api.put('/auth/profile', userData);
+    const config = userData instanceof FormData
+      ? { headers: { 'Content-Type': 'multipart/form-data' } }
+      : undefined;
+    const { data } = await api.put('/auth/profile', userData, config);
     setUser(data.user || data.data);
     return data;
   };

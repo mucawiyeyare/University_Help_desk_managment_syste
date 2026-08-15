@@ -1,7 +1,7 @@
 import React from 'react';
 import { X } from 'lucide-react';
 
-export default function Modal({ isOpen, onClose, title, children }) {
+export default function Modal({ isOpen, onClose, title, children, maxWidth = 'max-w-lg' }) {
   if (!isOpen) return null;
 
   return (
@@ -10,7 +10,7 @@ export default function Modal({ isOpen, onClose, title, children }) {
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden"
+        className={`w-full ${maxWidth} rounded-2xl shadow-2xl overflow-hidden`}
         style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
       >
         {/* Header */}

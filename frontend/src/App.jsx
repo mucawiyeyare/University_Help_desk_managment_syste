@@ -21,9 +21,11 @@ import TicketDetail from './pages/requester/TicketDetail';
 // Agent Pages
 import AgentDashboard from './pages/agent/Dashboard';
 import AgentMyTickets from './pages/agent/MyTickets';
+import AgentSLARank from './pages/agent/SLARank';
 
 // Manager Pages
 import ManagerDashboard from './pages/manager/Dashboard';
+import UnassignedQueue from './pages/manager/UnassignedQueue';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/Dashboard';
@@ -32,16 +34,13 @@ import UserManagement from './pages/admin/Users';
 import DepartmentManagement from './pages/admin/Departments';
 import CategoryManagement from './pages/admin/Categories';
 import SLAPolicies from './pages/admin/SLAPolicies';
-import KnowledgeAdmin from './pages/admin/KnowledgeAdmin';
-import AdminAnnouncements from './pages/admin/Announcements';
 import ReportsAnalytics from './pages/admin/Reports';
 import AdminFeedback from './pages/admin/Feedback';
-import AdminAuditLogs from './pages/admin/AuditLogs';
 import AdminSettings from './pages/admin/Settings';
 
 // Shared Pages
-import KnowledgeBase from './pages/KnowledgeBase';
 import Profile from './pages/Profile';
+import Notifications from './pages/Notifications';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
@@ -151,6 +150,14 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/agent/reports"
+              element={
+                <ProtectedRoute allowedRoles={['agent']}>
+                  <AgentSLARank />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Manager Routes */}
             <Route
@@ -173,7 +180,7 @@ export default function App() {
               path="/manager/unassigned"
               element={
                 <ProtectedRoute allowedRoles={['manager', 'admin']}>
-                  <MyTickets />
+                  <UnassignedQueue />
                 </ProtectedRoute>
               }
             />
@@ -181,15 +188,7 @@ export default function App() {
               path="/manager/agents"
               element={
                 <ProtectedRoute allowedRoles={['manager', 'admin']}>
-                  <ManagerDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/manager/escalations"
-              element={
-                <ProtectedRoute allowedRoles={['manager', 'admin']}>
-                  <MyTickets />
+                  <UserManagement managerMode />
                 </ProtectedRoute>
               }
             />
@@ -252,22 +251,6 @@ export default function App() {
               }
             />
             <Route
-              path="/admin/knowledge"
-              element={
-                <ProtectedRoute allowedRoles={['admin']}>
-                  <KnowledgeAdmin />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/announcements"
-              element={
-                <ProtectedRoute allowedRoles={['admin']}>
-                  <AdminAnnouncements />
-                </ProtectedRoute>
-              }
-            />
-            <Route
               path="/admin/reports"
               element={
                 <ProtectedRoute allowedRoles={['admin']}>
@@ -280,14 +263,6 @@ export default function App() {
               element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <AdminFeedback />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/audit-logs"
-              element={
-                <ProtectedRoute allowedRoles={['admin']}>
-                  <AdminAuditLogs />
                 </ProtectedRoute>
               }
             />
@@ -310,18 +285,10 @@ export default function App() {
               }
             />
             <Route
-              path="/knowledge"
-              element={
-                <ProtectedRoute allowedRoles={['requester', 'agent', 'manager', 'admin']}>
-                  <KnowledgeBase />
-                </ProtectedRoute>
-              }
-            />
-            <Route
               path="/notifications"
               element={
                 <ProtectedRoute allowedRoles={['requester', 'agent', 'manager', 'admin']}>
-                  <RequesterDashboard />
+                  <Notifications />
                 </ProtectedRoute>
               }
             />

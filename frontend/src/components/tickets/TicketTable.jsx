@@ -5,6 +5,7 @@ import { Paperclip, Search, UserCheck, Eye, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { updateTicketApi, assignTicketApi } from '../../api/tickets';
 import { getAgentsApi } from '../../api/users';
+import TicketSLAStatus, { getTicketAssignmentState, getTicketSLAState } from './TicketSLAStatus';
 
 export default function TicketTable({ tickets = [], loading, showSearch = true, onRefresh }) {
   const { user } = useAuth();
@@ -26,9 +27,10 @@ export default function TicketTable({ tickets = [], loading, showSearch = true, 
 
   const handleQuickStatusChange = async (ticketId, newStatus) => {
     try {
-      await updateTicketApi(ticketId, { status: newStatus });
+      const res = await updateTicketApi(ticketId, { status: newStatus });
+      const updatedTicket = res.data.data;
       setLocalTickets((prev) =>
-        prev.map((t) => (t._id === ticketId ? { ...t, status: newStatus } : t))
+        prev.map((t) => (t._id === ticketId ? { ...t, ...updatedTicket } : t))
       );
       if (onRefresh) onRefresh();
     } catch (err) {
@@ -127,31 +129,37 @@ export default function TicketTable({ tickets = [], loading, showSearch = true, 
                   color: 'var(--color-text-muted)',
                 }}
               >
-                <th className="py-3.5 px-4">Ticket #</th>
-                <th className="py-3.5 px-4">Subject</th>
-                <th className="py-3.5 px-4">Priority</th>
-                <th className="py-3.5 px-4">Status</th>
-                <th className="py-3.5 px-4">Assigned Agent</th>
-                <th className="py-3.5 px-4">Department</th>
-                <th className="py-3.5 px-4">Created</th>
-                <th className="py-3.5 px-4 text-center">Action</th>
+                <th className="py-3 px-4">Ticket #</th>
+                <th className="py-3 px-4">Subject</th>
+                <th className="py-3 px-4">Requester</th>
+                <th className="py-3 px-4">Priority</th>
+                <th className="py-3 px-4">SLA</th>
+                <th className="py-3 px-4">Status</th>
+                <th className="py-3 px-4">Assigned Agent</th>
+                <th className="py-3 px-4">Dept</th>
+                <th className="py-3 px-4 text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredTickets.map((t) => (
-                <tr
-                  key={t._id}
-                  className="transition-colors group border-b"
-                  style={{ borderColor: 'var(--color-border)' }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--color-surface2)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                >
-                  <td className="py-3.5 px-4 font-mono font-semibold" style={{ color: 'var(--color-accent)' }}>
+              {filteredTickets.map((t) => {
+                const slaState = getTicketSLAState(t);
+                const assignmentState = getTicketAssignmentState(t);
+                const rowBackground = slaState?.rowBackground || assignmentState?.rowBackground || 'transparent';
+                const rowHoverBackground = slaState?.rowHoverBackground || assignmentState?.rowHoverBackground || 'var(--color-surface2)';
+                return (
+                  <tr
+                    key={t._id}
+                    className="border-b transition-colors"
+                    style={{ borderColor: 'var(--color-border)', background: rowBackground }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = rowHoverBackground)}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = rowBackground)}
+                  >
+                  <td className="py-3 px-4 font-mono font-semibold" style={{ color: 'var(--color-accent)' }}>
                     <Link to={`/tickets/${t._id}`} className="hover:underline">
                       {t.ticketNumber}
                     </Link>
                   </td>
-                  <td className="py-3.5 px-4 font-medium max-w-xs truncate" style={{ color: 'var(--color-text)' }}>
+                  <td className="py-3 px-4 font-medium max-w-xs truncate" style={{ color: 'var(--color-text)' }}>
                     <Link to={`/tickets/${t._id}`} className="hover:opacity-75 transition-opacity">
                       {t.subject}
                     </Link>
@@ -159,10 +167,16 @@ export default function TicketTable({ tickets = [], loading, showSearch = true, 
                       <Paperclip className="inline-block w-3 h-3 ml-2" style={{ color: 'var(--color-text-muted)' }} />
                     )}
                   </td>
-                  <td className="py-3.5 px-4">
+                  <td className="py-3 px-4" style={{ color: 'var(--color-text-muted)' }}>
+                    {t.requester?.name || 'Unknown'}
+                  </td>
+                  <td className="py-3 px-4">
                     <Badge type="priority" value={t.priority} />
                   </td>
-                  <td className="py-3.5 px-4">
+                  <td className="py-3 px-4">
+                    <TicketSLAStatus ticket={t} compact />
+                  </td>
+                  <td className="py-3 px-4">
                     {isStaff ? (
                       <select
                         value={t.status}
@@ -181,20 +195,17 @@ export default function TicketTable({ tickets = [], loading, showSearch = true, 
                       <Badge type="status" value={t.status} />
                     )}
                   </td>
-                  <td className="py-3.5 px-4 text-xs font-medium">
+                  <td className="py-3 px-4 text-xs font-medium">
                     {t.assignedAgent?.name ? (
                       <span className="text-emerald-400 font-semibold">{t.assignedAgent.name}</span>
                     ) : (
-                      <span className="text-amber-400 italic">Unassigned</span>
+                      <span className="text-rose-400 italic font-semibold">Unassigned</span>
                     )}
                   </td>
-                  <td className="py-3.5 px-4" style={{ color: 'var(--color-text-muted)' }}>
+                  <td className="py-3 px-4" style={{ color: 'var(--color-text-muted)' }}>
                     {t.department?.name || 'General'}
                   </td>
-                  <td className="py-3.5 px-4 text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                    {new Date(t.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="py-3.5 px-4 text-center">
+                  <td className="py-3 px-4 text-center">
                     <div className="flex items-center justify-center gap-1.5">
                       <Link
                         to={`/tickets/${t._id}`}
@@ -214,8 +225,9 @@ export default function TicketTable({ tickets = [], loading, showSearch = true, 
                       )}
                     </div>
                   </td>
-                </tr>
-              ))}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

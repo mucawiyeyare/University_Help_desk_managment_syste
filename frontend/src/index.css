@@ -224,3 +224,27 @@ body {
   background: rgba(33, 117, 181, 0.06) !important;
   color: var(--color-text) !important;
 }
+
+/* Ticket tables: give each ticket its own compact, bordered row card. */
+.ticket-table-card {
+  filter: drop-shadow(0 3px 5px rgba(12, 35, 56, 0.08));
+}
+
+.ticket-table-card > td {
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.ticket-table-card > td:first-child {
+  border-left: 1px solid var(--color-border);
+  border-radius: 0.75rem 0 0 0.75rem;
+}
+
+.ticket-table-card > td:last-child {
+  border-right: 1px solid var(--color-border);
+  border-radius: 0 0.75rem 0.75rem 0;
+}
+
+.ticket-table-card:hover {
+  filter: drop-shadow(0 5px 9px rgba(12, 35, 56, 0.13));
+}

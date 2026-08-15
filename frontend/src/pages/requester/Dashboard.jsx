@@ -4,26 +4,22 @@ import StatCard from '../../components/ui/StatCard';
 import TicketTable from '../../components/tickets/TicketTable';
 import { getDashboardStatsApi } from '../../api/reports';
 import { getTicketsApi } from '../../api/tickets';
-import { getAnnouncementsApi } from '../../api/announcements';
-import { Ticket, PlusCircle, AlertCircle, Clock, CheckCircle2, Megaphone } from 'lucide-react';
+import { Ticket, PlusCircle, AlertCircle, Clock, CheckCircle2 } from 'lucide-react';
 
 export default function RequesterDashboard() {
   const [stats, setStats] = useState(null);
   const [recentTickets, setRecentTickets] = useState([]);
-  const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [statsRes, ticketsRes, annRes] = await Promise.all([
+        const [statsRes, ticketsRes] = await Promise.all([
           getDashboardStatsApi(),
           getTicketsApi({ limit: 5 }),
-          getAnnouncementsApi(),
         ]);
         if (statsRes.data.success) setStats(statsRes.data.data);
         if (ticketsRes.data.success) setRecentTickets(ticketsRes.data.data);
-        if (annRes.data.success) setAnnouncements(annRes.data.data);
       } catch (err) {
         console.error(err);
       } finally {
@@ -56,28 +52,6 @@ export default function RequesterDashboard() {
           <PlusCircle className="w-4 h-4" /> Create Ticket
         </Link>
       </div>
-
-      {/* Announcements */}
-      {announcements.length > 0 && (
-        <div
-          className="rounded-xl p-4 space-y-2 border"
-          style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
-        >
-          <div className="flex items-center gap-2 text-xs font-bold text-amber-500 uppercase tracking-wider">
-            <Megaphone className="w-4 h-4" /> System Announcements
-          </div>
-          {announcements.map((a) => (
-            <div
-              key={a._id}
-              className="p-3 rounded-lg border text-xs"
-              style={{ background: 'var(--color-surface2)', borderColor: 'var(--color-border)' }}
-            >
-              <h4 className="font-semibold" style={{ color: 'var(--color-text)' }}>{a.title}</h4>
-              <p className="mt-1" style={{ color: 'var(--color-text-muted)' }}>{a.body}</p>
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">

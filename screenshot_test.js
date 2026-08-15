@@ -55,23 +55,23 @@ async function ss(page, name, note) {
   await delay(2500);
   await ss(page, 'admin_02_tickets_crud.png', 'Admin Tickets CRUD');
 
-  // SPA Navigate to Admin Knowledge Base
-  console.log('📸 3. Admin Knowledge Base (SPA Click)');
+  // SPA Navigate to SLA Policies
+  console.log('📸 3. SLA Policies (SPA Click)');
   await page.evaluate(() => {
-    const a = Array.from(document.querySelectorAll('a')).find(x => x.href.includes('/admin/knowledge'));
+    const a = Array.from(document.querySelectorAll('a')).find(x => x.href.includes('/admin/sla'));
     if (a) a.click();
   });
   await delay(2500);
-  await ss(page, 'admin_03_knowledge_crud.png', 'Admin Knowledge CRUD');
+  await ss(page, 'admin_03_sla_policies.png', 'SLA Policies');
 
-  // SPA Navigate to Admin Announcements
-  console.log('📸 4. Admin Announcements (SPA Click)');
+  // SPA Navigate to Reports
+  console.log('📸 4. Reports (SPA Click)');
   await page.evaluate(() => {
-    const a = Array.from(document.querySelectorAll('a')).find(x => x.href.includes('/admin/announcements'));
+    const a = Array.from(document.querySelectorAll('a')).find(x => x.href.includes('/admin/reports'));
     if (a) a.click();
   });
   await delay(2500);
-  await ss(page, 'admin_04_announcements_crud.png', 'Admin Announcements CRUD');
+  await ss(page, 'admin_04_reports.png', 'Admin Reports');
 
   // SPA Navigate to User Feedback
   console.log('📸 5. User Feedback (SPA Click)');
@@ -82,14 +82,14 @@ async function ss(page, name, note) {
   await delay(2500);
   await ss(page, 'admin_05_feedback.png', 'User Feedback');
 
-  // SPA Navigate to Audit Logs
-  console.log('📸 6. Audit Logs (SPA Click)');
+  // SPA Navigate to Notifications
+  console.log('📸 6. Notifications (SPA Click)');
   await page.evaluate(() => {
-    const a = Array.from(document.querySelectorAll('a')).find(x => x.href.includes('/admin/audit-logs'));
+    const a = Array.from(document.querySelectorAll('a')).find(x => x.href.includes('/notifications'));
     if (a) a.click();
   });
   await delay(2500);
-  await ss(page, 'admin_06_audit_logs.png', 'Audit Logs');
+  await ss(page, 'admin_06_notifications.png', 'Notifications');
 
   // SPA Navigate to System Settings
   console.log('📸 7. System Settings (SPA Click)');

@@ -5,8 +5,6 @@ const Department = require('../models/Department');
 const Category = require('../models/Category');
 const Subcategory = require('../models/Subcategory');
 const SLAPolicy = require('../models/SLAPolicy');
-const Announcement = require('../models/Announcement');
-const KnowledgeArticle = require('../models/KnowledgeArticle');
 
 const seedData = async () => {
   try {
@@ -122,46 +120,6 @@ const seedData = async () => {
       if (!exists) await SLAPolicy.create(s);
     }
     console.log('✅ Created SLA Policies');
-
-    // 6. Announcements
-    const annCount = await Announcement.countDocuments();
-    if (annCount === 0) {
-      await Announcement.create({
-        title: 'Scheduled System Maintenance: University Student Portal',
-        body: 'The Student Portal and LMS will undergo routine database maintenance on Saturday from 02:00 AM to 06:00 AM. Please submit urgent tickets prior to maintenance window.',
-        type: 'maintenance',
-        author: admin._id,
-      });
-      await Announcement.create({
-        title: 'New Campus-wide High-Speed WiFi Launched',
-        body: 'Students and Lecturers can now connect to EduWiFi-HighSpeed across all main campus buildings using institutional credentials.',
-        type: 'info',
-        author: admin._id,
-      });
-      console.log('✅ Created System Announcements');
-    }
-
-    // 7. Knowledge Base Articles
-    const kbCount = await KnowledgeArticle.countDocuments();
-    if (kbCount === 0) {
-      await KnowledgeArticle.create({
-        title: 'How to Reset Your Student Portal & Email Password',
-        body: '1. Visit password.uhdms.edu\n2. Enter your Student Registration Number\n3. Verification code will be sent to your registered phone.\n4. Enter code and set your new password.',
-        tags: ['password', 'login', 'email', 'portal'],
-        visibility: 'public',
-        isPublished: true,
-        author: admin._id,
-      });
-      await KnowledgeArticle.create({
-        title: 'Connecting to University Campus WiFi (EduWiFi)',
-        body: 'Select "EduWiFi" network. Use your full institutional email (e.g. s12345@student.uhdms.edu) as identity and your portal password.',
-        tags: ['wifi', 'internet', 'network'],
-        visibility: 'public',
-        isPublished: true,
-        author: admin._id,
-      });
-      console.log('✅ Created Knowledge Base Articles');
-    }
 
     console.log('🎉 Seeding Complete!');
     process.exit(0);

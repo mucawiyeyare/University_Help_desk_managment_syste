@@ -61,6 +61,136 @@ exports.getTicketVolumeReport = asyncHandler(async (req, res) => {
   res.json({ success: true, data });
 });
 
+// @desc  Resolved and unresolved ticket time summary
+// @route GET /api/reports/time-summary
+exports.getTicketTimeSummary = asyncHandler(async (req, res) => {
+  const deptFilter = req.user.role === 'manager' && req.user.department
+    ? { department: req.user.department._id || req.user.department }
+    : {};
+  const now = new Date();
+  const completedStatuses = ['resolved', 'closed', 'cancelled'];
+
+  const [summary] = await Ticket.aggregate([
+    { $match: { isDeleted: false, ...deptFilter } },
+    {
+      $group: {
+        _id: null,
+        totalUnresolved: {
+          $sum: { $cond: [{ $in: ['$status', completedStatuses] }, 0, 1] },
+        },
+        avgUnresolvedMs: {
+          $avg: {
+            $cond: [
+              { $in: ['$status', completedStatuses] },
+              null,
+              { $subtract: [now, '$createdAt'] },
+            ],
+          },
+        },
+        totalResolved: {
+          $sum: { $cond: [{ $in: ['$status', completedStatuses] }, 1, 0] },
+        },
+        avgResolutionMs: {
+          $avg: {
+            $cond: [
+              {
+                $and: [
+                  { $in: ['$status', completedStatuses] },
+                  { $ne: [{ $ifNull: ['$resolvedAt', '$closedAt'] }, null] },
+                ],
+              },
+              { $subtract: [{ $ifNull: ['$resolvedAt', '$closedAt'] }, '$createdAt'] },
+              null,
+            ],
+          },
+        },
+      },
+    },
+  ]);
+
+  res.json({
+    success: true,
+    data: {
+      totalUnresolved: summary?.totalUnresolved || 0,
+      totalResolved: summary?.totalResolved || 0,
+      avgUnresolvedMs: Math.round(summary?.avgUnresolvedMs || 0),
+      avgResolutionMs: Math.round(summary?.avgResolutionMs || 0),
+    },
+  });
+});
+
+// @desc  Resolved-ticket SLA performance
+// @route GET /api/reports/resolved-sla
+exports.getResolvedSLAReport = asyncHandler(async (req, res) => {
+  const deptFilter = req.user.role === 'manager' && req.user.department
+    ? { department: req.user.department._id || req.user.department }
+    : {};
+
+  const [report] = await Ticket.aggregate([
+    {
+      $match: {
+        isDeleted: false,
+        status: { $in: ['resolved', 'closed'] },
+        slaDueResolution: { $ne: null },
+        ...deptFilter,
+      },
+    },
+    {
+      $project: {
+        priority: 1,
+        slaDueResolution: 1,
+        completedAt: { $ifNull: ['$resolvedAt', '$closedAt'] },
+      },
+    },
+    { $match: { completedAt: { $ne: null } } },
+    {
+      $project: {
+        priority: 1,
+        resolvedAfterDeadline: { $gt: ['$completedAt', '$slaDueResolution'] },
+      },
+    },
+    {
+      $facet: {
+        summary: [
+          {
+            $group: {
+              _id: null,
+              totalResolved: { $sum: 1 },
+              resolvedWithinSLA: { $sum: { $cond: ['$resolvedAfterDeadline', 0, 1] } },
+              resolvedAfterDeadline: { $sum: { $cond: ['$resolvedAfterDeadline', 1, 0] } },
+            },
+          },
+        ],
+        byPriority: [
+          {
+            $group: {
+              _id: '$priority',
+              resolvedWithinSLA: { $sum: { $cond: ['$resolvedAfterDeadline', 0, 1] } },
+              resolvedAfterDeadline: { $sum: { $cond: ['$resolvedAfterDeadline', 1, 0] } },
+            },
+          },
+          { $sort: { _id: 1 } },
+        ],
+      },
+    },
+  ]);
+
+  const summary = report?.summary?.[0] || {};
+  const totalResolved = summary.totalResolved || 0;
+  const resolvedAfterDeadline = summary.resolvedAfterDeadline || 0;
+
+  res.json({
+    success: true,
+    data: {
+      totalResolved,
+      resolvedWithinSLA: summary.resolvedWithinSLA || 0,
+      resolvedAfterDeadline,
+      lateResolutionRate: totalResolved ? Math.round((resolvedAfterDeadline / totalResolved) * 100) : 0,
+      byPriority: report?.byPriority || [],
+    },
+  });
+});
+
 // @desc  Tickets by status
 // @route GET /api/reports/by-status
 exports.getTicketsByStatus = asyncHandler(async (req, res) => {
@@ -126,6 +256,150 @@ exports.getAgentPerformance = asyncHandler(async (req, res) => {
     { $sort: { resolved: -1 } },
   ]);
   res.json({ success: true, data });
+});
+
+// @desc  Rank agents by tickets resolved within their SLA deadline
+// @route GET /api/reports/agent-sla-ranking
+exports.getAgentSLARanking = asyncHandler(async (req, res) => {
+  const userDepartment = req.user.department?._id || req.user.department;
+  const departmentFilter = req.user.role === 'manager' && userDepartment
+    ? { department: userDepartment }
+    : req.user.role === 'agent' && userDepartment
+      ? { department: userDepartment }
+      : req.user.role === 'agent'
+        ? { assignedAgent: req.user._id }
+        : {};
+
+  const agents = await Ticket.aggregate([
+    {
+      $match: {
+        isDeleted: false,
+        status: { $in: ['resolved', 'closed'] },
+        assignedAgent: { $ne: null },
+        slaDueResolution: { $ne: null },
+        ...departmentFilter,
+      },
+    },
+    {
+      $project: {
+        assignedAgent: 1,
+        createdAt: 1,
+        slaDueResolution: 1,
+        completedAt: { $ifNull: ['$resolvedAt', '$closedAt'] },
+      },
+    },
+    { $match: { completedAt: { $ne: null } } },
+    {
+      $project: {
+        assignedAgent: 1,
+        resolvedWithinSLA: { $lte: ['$completedAt', '$slaDueResolution'] },
+        resolutionTimeMs: { $subtract: ['$completedAt', '$createdAt'] },
+      },
+    },
+    {
+      $group: {
+        _id: '$assignedAgent',
+        totalResolved: { $sum: 1 },
+        resolvedWithinSLA: { $sum: { $cond: ['$resolvedWithinSLA', 1, 0] } },
+        resolvedAfterSLA: { $sum: { $cond: ['$resolvedWithinSLA', 0, 1] } },
+        avgResolutionMs: { $avg: '$resolutionTimeMs' },
+      },
+    },
+    { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'agent' } },
+    { $unwind: '$agent' },
+    { $match: { 'agent.role': 'agent', 'agent.isActive': true } },
+    {
+      $project: {
+        _id: 0,
+        agentId: '$_id',
+        name: '$agent.name',
+        email: '$agent.email',
+        avatar: '$agent.avatar',
+        totalResolved: 1,
+        resolvedWithinSLA: 1,
+        resolvedAfterSLA: 1,
+        avgResolutionMs: 1,
+      },
+    },
+  ]);
+
+  const ranking = agents
+    .map((agent) => ({
+      ...agent,
+      avgResolutionMs: Math.round(agent.avgResolutionMs || 0),
+      slaComplianceRate: agent.totalResolved
+        ? Math.round((agent.resolvedWithinSLA / agent.totalResolved) * 100)
+        : 0,
+    }))
+    .sort((first, second) => (
+      second.resolvedWithinSLA - first.resolvedWithinSLA
+      || second.slaComplianceRate - first.slaComplianceRate
+      || second.totalResolved - first.totalResolved
+      || first.name.localeCompare(second.name)
+    ))
+    .map((agent, index) => ({ ...agent, rank: index + 1 }));
+
+  const myRank = ranking.find((agent) => String(agent.agentId) === String(req.user._id)) || null;
+  const isAgent = req.user.role === 'agent';
+
+  res.json({
+    success: true,
+    data: {
+      scope: isAgent ? 'your department' : req.user.role === 'manager' ? 'your department' : 'all departments',
+      totalRankedAgents: ranking.length,
+      myRank,
+      agents: isAgent ? (myRank ? [myRank] : []) : ranking,
+    },
+  });
+});
+
+// @desc  Rank departments by student complaint tickets
+// @route GET /api/reports/student-complaint-departments
+exports.getStudentComplaintDepartmentReport = asyncHandler(async (req, res) => {
+  const userDepartment = req.user.department?._id || req.user.department;
+  const departmentFilter = req.user.role === 'manager' && userDepartment
+    ? { _id: userDepartment }
+    : {};
+  const departments = await Department.find({ isActive: true, ...departmentFilter }).select('name');
+  const departmentIds = departments.map((department) => department._id);
+
+  const complaintCounts = departmentIds.length ? await Ticket.aggregate([
+    {
+      $match: {
+        isDeleted: false,
+        type: 'complaint',
+        department: { $in: departmentIds },
+      },
+    },
+    { $lookup: { from: 'users', localField: 'requester', foreignField: '_id', as: 'requesterUser' } },
+    { $unwind: '$requesterUser' },
+    { $match: { 'requesterUser.requesterType': 'student' } },
+    { $group: { _id: '$department', complaintCount: { $sum: 1 } } },
+  ]) : [];
+
+  const countByDepartment = new Map(
+    complaintCounts.map((entry) => [String(entry._id), entry.complaintCount])
+  );
+  const rankedDepartments = departments
+    .map((department) => ({
+      departmentId: department._id,
+      name: department.name,
+      complaintCount: countByDepartment.get(String(department._id)) || 0,
+    }))
+    .sort((first, second) => second.complaintCount - first.complaintCount || first.name.localeCompare(second.name));
+  const lowest = [...rankedDepartments].sort(
+    (first, second) => first.complaintCount - second.complaintCount || first.name.localeCompare(second.name)
+  )[0] || null;
+
+  res.json({
+    success: true,
+    data: {
+      scope: req.user.role === 'manager' ? 'your department' : 'all departments',
+      departments: rankedDepartments,
+      highest: rankedDepartments[0] || null,
+      lowest,
+    },
+  });
 });
 
 // @desc  SLA compliance report

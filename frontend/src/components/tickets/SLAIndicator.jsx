@@ -1,50 +1,43 @@
 import React from 'react';
-import { Clock, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Clock } from 'lucide-react';
+import { getTicketAssignmentState, getTicketSLAState } from './TicketSLAStatus';
 
 export default function SLAIndicator({ ticket }) {
-  if (!ticket || !ticket.slaDueResolution) return null;
+  if (!ticket) return null;
 
-  const now = new Date();
-  const due = new Date(ticket.slaDueResolution);
-  const diffMs = due - now;
+  const state = getTicketSLAState(ticket) || getTicketAssignmentState(ticket);
+  const due = ticket.slaDueResolution ? new Date(ticket.slaDueResolution) : null;
 
-  const isResolved = ['resolved', 'closed'].includes(ticket.status);
-  if (isResolved) {
+  if (state) {
+    const Icon = state.Icon;
     return (
       <div
-        className="rounded-lg p-3 text-xs flex items-center gap-2 border"
-        style={{ background: 'rgba(52,211,153,0.1)', borderColor: 'rgba(52,211,153,0.25)', color: '#34D399' }}
+        className="rounded-lg p-3 text-xs flex items-start gap-2 border"
+        style={{ background: state.background, borderColor: state.border, color: state.color }}
       >
-        <CheckCircle className="w-4 h-4 shrink-0" /> Resolution SLA Completed
+        <Icon className="w-4 h-4 shrink-0 mt-0.5" />
+        <span>
+          <strong className="font-bold block">{state.label}</strong>
+          {state.description}{due ? `. Deadline: ${due.toLocaleString()}` : ''}
+        </span>
       </div>
     );
   }
 
-  const isBreached = diffMs < 0;
+  if (!due) return null;
 
-  if (isBreached) {
-    return (
-      <div
-        className="rounded-lg p-3 text-xs flex items-center gap-2 border animate-pulse"
-        style={{ background: 'rgba(248,113,113,0.1)', borderColor: 'rgba(248,113,113,0.25)', color: '#F87171' }}
-      >
-        <AlertTriangle className="w-4 h-4 shrink-0" />
-        <span className="font-bold">SLA Breached!</span> Resolution was due {new Date(due).toLocaleString()}
-      </div>
-    );
-  }
-
+  const diffMs = due.getTime() - Date.now();
   const hours = Math.floor(diffMs / (1000 * 60 * 60));
-  const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+  const mins = Math.max(0, Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60)));
 
   return (
     <div
       className="rounded-lg p-3 text-xs flex items-center gap-2 border"
-      style={{ background: 'rgba(99,102,241,0.1)', borderColor: 'rgba(99,102,241,0.25)', color: 'var(--color-accent)' }}
+      style={{ background: 'rgba(59,130,246,0.1)', borderColor: 'rgba(59,130,246,0.3)', color: '#60A5FA' }}
     >
-      <Clock className="w-4 h-4 shrink-0 text-indigo-500" />
+      <Clock className="w-4 h-4 shrink-0" />
       <span>
-        SLA Due in <strong className="font-bold" style={{ color: 'var(--color-text)' }}>{hours}h {mins}m</strong> ({due.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
+        SLA due in <strong className="font-bold" style={{ color: 'var(--color-text)' }}>{hours}h {mins}m</strong> ({due.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
       </span>
     </div>
   );

@@ -1,5 +1,12 @@
 const mongoose = require('mongoose');
 
+const formatTicketNumber = (value) => {
+  if (!value) return value;
+  const numberMatch = String(value).match(/(\d+)$/);
+  if (!numberMatch) return value;
+  return String(Number.parseInt(numberMatch[1], 10)).padStart(2, '0');
+};
+
 const AttachmentSchema = new mongoose.Schema({
   filename: String,
   originalName: String,
@@ -10,7 +17,7 @@ const AttachmentSchema = new mongoose.Schema({
 }, { _id: false });
 
 const TicketSchema = new mongoose.Schema({
-  ticketNumber: { type: String, unique: true, required: true },
+  ticketNumber: { type: String, unique: true, required: true, get: formatTicketNumber },
   requester: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   subject: { type: String, required: true, maxlength: 200 },
   description: { type: String, required: true },
@@ -31,6 +38,8 @@ const TicketSchema = new mongoose.Schema({
   firstResponseAt: Date,
   slaResponseBreached: { type: Boolean, default: false },
   slaResolutionBreached: { type: Boolean, default: false },
+  slaApproachingNotified: { type: Boolean, default: false },
+  slaBreachNotified: { type: Boolean, default: false },
   resolvedAt: Date,
   closedAt: Date,
   resolutionSummary: String,
@@ -44,5 +53,7 @@ TicketSchema.index({ department: 1 });
 TicketSchema.index({ assignedAgent: 1 });
 TicketSchema.index({ requester: 1 });
 TicketSchema.index({ createdAt: 1 });
+TicketSchema.set('toJSON', { getters: true });
+TicketSchema.set('toObject', { getters: true });
 
 module.exports = mongoose.model('Ticket', TicketSchema);

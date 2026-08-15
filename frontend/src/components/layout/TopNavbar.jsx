@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useNavigate, Link } from 'react-router-dom';
+import UserAvatar from '../ui/UserAvatar';
 
 export default function TopNavbar({ onMenuClick }) {
   const { user, logout } = useAuth();
@@ -173,16 +174,12 @@ export default function TopNavbar({ onMenuClick }) {
             className="flex items-center gap-2 p-1.5 rounded-lg transition-colors"
             style={{ color: 'var(--color-text-soft)' }}
           >
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs"
-              style={{
-                background: 'linear-gradient(135deg, #1A56A7, #1A7A4A)',
-                color: '#FFFFFF',
-                border: '2px solid var(--color-border)',
-              }}
-            >
-              {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
-            </div>
+            <UserAvatar
+              avatar={user?.avatar}
+              name={user?.name}
+              className="w-8 h-8 text-xs"
+              style={{ border: '2px solid var(--color-border)' }}
+            />
             <span className="text-sm font-medium hidden sm:inline" style={{ color: 'var(--color-text)' }}>
               {user?.name?.split(' ')[0]}
             </span>

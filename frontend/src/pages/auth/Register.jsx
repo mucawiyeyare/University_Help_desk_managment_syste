@@ -2,14 +2,14 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { GraduationCap, Mail, Lock, User, ArrowRight, Sun, Moon } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Sun, Moon } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const inputStyle = {
-  background: 'var(--input-bg)',
-  border: '1px solid var(--input-border)',
-  color: 'var(--input-text)',
-};
+const getInputStyle = (isDark) => ({
+  background: isDark ? '#111111' : '#F4FBF6',
+  border: `1px solid ${isDark ? '#2D4A36' : '#B9DEC5'}`,
+  color: isDark ? '#F4FFF7' : '#16331F',
+});
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -39,126 +39,135 @@ export default function Register() {
   };
 
   const set = (key) => (e) => setFormData({ ...formData, [key]: e.target.value });
+  const inputStyle = getInputStyle(isDark);
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center p-4 transition-colors duration-300"
-      style={{ background: 'var(--color-bg)' }}
+      className="min-h-screen flex items-center justify-center p-4 relative transition-colors duration-300"
+      style={{ background: isDark ? '#000000' : '#F1FAF3' }}
     >
-      {/* Background orbs */}
-      <div className="fixed top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full blur-[120px] pointer-events-none"
-        style={{ background: isDark ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.06)' }} />
-      <div className="fixed bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full blur-[120px] pointer-events-none"
-        style={{ background: isDark ? 'rgba(139,92,246,0.1)' : 'rgba(139,92,246,0.05)' }} />
-
-      {/* Theme toggle */}
       <button
         onClick={toggleTheme}
         title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-        className="fixed top-5 right-5 z-50 p-2.5 rounded-xl border transition-all duration-300 shadow-lg"
+        className="fixed top-5 right-5 z-50 p-2.5 rounded-xl border transition-colors shadow-lg"
         style={{
-          background: isDark ? 'rgba(15,23,42,0.9)' : 'rgba(255,255,255,0.9)',
-          borderColor: 'var(--color-border)',
-          color: isDark ? '#A5B4FC' : '#4F46E5',
-          backdropFilter: 'blur(8px)',
+          background: isDark ? '#111111' : '#FFFFFF',
+          borderColor: isDark ? '#2D4A36' : '#B9DEC5',
+          color: isDark ? '#86EFAC' : '#15803D',
         }}
       >
         {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
       </button>
 
       <div
-        className="w-full max-w-md rounded-2xl p-8 shadow-2xl relative z-10"
-        style={{ background: 'var(--card-bg)', border: '1px solid var(--color-border)' }}
+        className="w-full max-w-md rounded-2xl shadow-2xl relative z-10 overflow-hidden"
+        style={{
+          background: isDark ? '#0B0B0B' : '#FFFFFF',
+          border: `1px solid ${isDark ? '#245232' : '#B9DEC5'}`,
+        }}
       >
-        {/* Header */}
-        <div className="text-center mb-6">
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3 border"
-            style={{ background: 'rgba(99,102,241,0.15)', color: '#818CF8', borderColor: 'rgba(99,102,241,0.3)' }}>
-            <GraduationCap className="w-7 h-7" />
+        <div className="h-1.5 w-full" style={{ background: '#15803D' }} />
+
+        <div className="p-8">
+          <div className="flex flex-col items-center mb-7 text-center">
+            <div
+              className="mb-4 rounded-2xl overflow-hidden flex items-center justify-center"
+              style={{
+                width: '100px',
+                height: '115px',
+                background: isDark ? '#0B0B0B' : '#FFFFFF',
+                padding: '6px',
+                border: '1.5px solid rgba(21,128,61,0.35)',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+              }}
+            >
+              <img
+                src={isDark ? '/hormuud-logo-dark.png' : '/hormuud-logo.png'}
+                alt="Hormuud University Official Logo"
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+              />
+            </div>
+            <h1 className="text-2xl font-extrabold tracking-tight" style={{ color: isDark ? '#FFFFFF' : '#16331F' }}>
+              Hormuud University
+            </h1>
+            <p className="text-sm font-semibold mt-0.5" style={{ color: '#15803D' }}>
+              Help Desk Management System
+            </p>
+            <p className="text-xs mt-1.5 px-4" style={{ color: isDark ? '#A7B8AC' : '#587060' }}>
+              Create your account to access the support portal
+            </p>
           </div>
-          <h2 className="text-2xl font-bold" style={{ color: 'var(--color-text)' }}>Create Account</h2>
-          <p className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>Register for University Help Desk portal</p>
+
+          {error && (
+            <div className="mb-4 p-3 rounded-xl text-xs" style={{ background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.3)', color: '#F87171' }}>
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold mb-1.5" style={{ color: isDark ? '#B8D7C0' : '#285136' }}>Full Name</label>
+              <div className="relative">
+                <User className="w-4 h-4 absolute left-3.5 top-3" style={{ color: isDark ? '#86A891' : '#587060' }} />
+                <input type="text" required value={formData.name} onChange={set('name')} placeholder="John Doe"
+                  className="w-full rounded-xl pl-10 pr-4 py-2.5 text-xs transition-all outline-none focus:ring-2 focus:ring-emerald-600/30 focus:border-emerald-600"
+                  style={inputStyle} />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold mb-1.5" style={{ color: isDark ? '#B8D7C0' : '#285136' }}>University Email</label>
+              <div className="relative">
+                <Mail className="w-4 h-4 absolute left-3.5 top-3" style={{ color: isDark ? '#86A891' : '#587060' }} />
+                <input type="email" required value={formData.email} onChange={set('email')} placeholder="s12345@student.uhdms.edu"
+                  className="w-full rounded-xl pl-10 pr-4 py-2.5 text-xs transition-all outline-none focus:ring-2 focus:ring-emerald-600/30 focus:border-emerald-600"
+                  style={inputStyle} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold mb-1.5" style={{ color: isDark ? '#B8D7C0' : '#285136' }}>User Type</label>
+                <select value={formData.requesterType} onChange={set('requesterType')}
+                  className="w-full rounded-xl px-3 py-2.5 text-xs outline-none focus:ring-2 focus:ring-emerald-600/30 focus:border-emerald-600"
+                  style={inputStyle}>
+                  <option value="student">Student</option>
+                  <option value="lecturer">Lecturer</option>
+                  <option value="staff">Staff</option>
+                  <option value="external">External User</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold mb-1.5" style={{ color: isDark ? '#B8D7C0' : '#285136' }}>Phone (Optional)</label>
+                <input type="text" value={formData.phone} onChange={set('phone')} placeholder="+1 555 000"
+                  className="w-full rounded-xl px-3 py-2.5 text-xs outline-none focus:ring-2 focus:ring-emerald-600/30 focus:border-emerald-600"
+                  style={inputStyle} />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold mb-1.5" style={{ color: isDark ? '#B8D7C0' : '#285136' }}>Password</label>
+              <div className="relative">
+                <Lock className="w-4 h-4 absolute left-3.5 top-3" style={{ color: isDark ? '#86A891' : '#587060' }} />
+                <input type="password" required minLength={6} value={formData.password} onChange={set('password')} placeholder="••••••••"
+                  className="w-full rounded-xl pl-10 pr-4 py-2.5 text-xs transition-all outline-none focus:ring-2 focus:ring-emerald-600/30 focus:border-emerald-600"
+                  style={inputStyle} />
+              </div>
+            </div>
+
+            <button type="submit" disabled={loading}
+              className="w-full py-3 bg-green-700 hover:bg-green-600 text-white rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2 shadow-lg shadow-green-900/20 disabled:opacity-50 disabled:cursor-not-allowed">
+              {loading ? 'Creating Account...' : 'Create Account'} <ArrowRight className="w-4 h-4" />
+            </button>
+          </form>
+
+          <p className="text-center text-xs mt-5" style={{ color: isDark ? '#A7B8AC' : '#587060' }}>
+            Already have an account?{' '}
+            <Link to="/login" className="text-green-700 font-semibold hover:text-green-600 hover:underline transition-colors">
+              Sign In
+            </Link>
+          </p>
         </div>
-
-        {/* Error */}
-        {error && (
-          <div className="mb-4 p-3 rounded-lg text-xs"
-            style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.25)', color: '#F87171' }}>
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Full Name */}
-          <div>
-            <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--color-text)' }}>Full Name</label>
-            <div className="relative">
-              <User className="w-4 h-4 absolute left-3 top-3" style={{ color: 'var(--color-text-muted)' }} />
-              <input type="text" required value={formData.name} onChange={set('name')}
-                placeholder="John Doe"
-                className="w-full rounded-lg pl-9 pr-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all"
-                style={inputStyle} />
-            </div>
-          </div>
-
-          {/* Email */}
-          <div>
-            <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--color-text)' }}>University Email</label>
-            <div className="relative">
-              <Mail className="w-4 h-4 absolute left-3 top-3" style={{ color: 'var(--color-text-muted)' }} />
-              <input type="email" required value={formData.email} onChange={set('email')}
-                placeholder="s12345@student.uhdms.edu"
-                className="w-full rounded-lg pl-9 pr-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all"
-                style={inputStyle} />
-            </div>
-          </div>
-
-          {/* Type + Phone */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--color-text)' }}>User Type</label>
-              <select value={formData.requesterType} onChange={set('requesterType')}
-                className="w-full rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all"
-                style={inputStyle}>
-                <option value="student">Student</option>
-                <option value="lecturer">Lecturer</option>
-                <option value="staff">Staff</option>
-                <option value="external">External User</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--color-text)' }}>Phone (Optional)</label>
-              <input type="text" value={formData.phone} onChange={set('phone')}
-                placeholder="+1 555 000"
-                className="w-full rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all"
-                style={inputStyle} />
-            </div>
-          </div>
-
-          {/* Password */}
-          <div>
-            <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--color-text)' }}>Password</label>
-            <div className="relative">
-              <Lock className="w-4 h-4 absolute left-3 top-3" style={{ color: 'var(--color-text-muted)' }} />
-              <input type="password" required minLength={6} value={formData.password} onChange={set('password')}
-                placeholder="••••••••"
-                className="w-full rounded-lg pl-9 pr-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all"
-                style={inputStyle} />
-            </div>
-          </div>
-
-          <button type="submit" disabled={loading}
-            className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-semibold text-xs transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 disabled:opacity-50 disabled:cursor-not-allowed">
-            {loading ? 'Creating Account...' : 'Register'} <ArrowRight className="w-4 h-4" />
-          </button>
-        </form>
-
-        <p className="text-center text-xs mt-6" style={{ color: 'var(--color-text-muted)' }}>
-          Already have an account?{' '}
-          <Link to="/login" className="text-indigo-500 font-semibold hover:text-indigo-400 hover:underline transition-colors">
-            Sign In
-          </Link>
-        </p>
       </div>
     </div>
   );

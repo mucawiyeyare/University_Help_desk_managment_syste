@@ -23,10 +23,8 @@ export default function DocumentViewerModal({ attachment, isOpen, onClose }) {
   const [error, setError] = useState(null);
   const [zoomLevel, setZoomLevel] = useState(100);
 
-  if (!attachment) return null;
-
-  const fileUrl = `http://localhost:5000/uploads/${attachment.filename}`;
-  const filename = attachment.originalName || attachment.filename || 'Document';
+  const fileUrl = attachment?.filename ? `http://localhost:5000/uploads/${attachment.filename}` : '';
+  const filename = attachment?.originalName || attachment?.filename || 'Document';
   const ext = filename.split('.').pop().toLowerCase();
 
   const isDocx = ['docx', 'doc'].includes(ext);
@@ -73,12 +71,14 @@ export default function DocumentViewerModal({ attachment, isOpen, onClose }) {
     }
   }, [isOpen, attachment, fileUrl, isDocx, isText]);
 
+  if (!attachment) return null;
+
   const handleOpenInNewTab = () => {
     window.open(fileUrl, '_blank', 'noopener,noreferrer');
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="" maxWidth="max-w-5xl">
+    <Modal isOpen={isOpen} onClose={onClose} title="" maxWidth="max-w-7xl">
       <div className="flex flex-col h-[82vh]">
         {/* ── Document Viewer Top Header ── */}
         <div
