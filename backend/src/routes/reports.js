@@ -14,6 +14,8 @@ const {
   getSLAReport,
   getSatisfactionReport,
   getTicketAging,
+  testEmailWorkflow,
+  getEmailLogs,
 } = require('../controllers/reportController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -36,5 +38,7 @@ router.get('/student-complaint-departments', getStudentComplaintDepartmentReport
 router.get('/sla', getSLAReport);
 router.get('/satisfaction', getSatisfactionReport);
 router.get('/aging', getTicketAging);
+router.post('/test-email', authorize('admin'), testEmailWorkflow);
+router.get('/email-logs', authorize('admin'), getEmailLogs);
 
 module.exports = router;

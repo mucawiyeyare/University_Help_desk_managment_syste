@@ -450,3 +450,72 @@ exports.getTicketAging = asyncHandler(async (req, res) => {
   });
   res.json({ success: true, data: buckets });
 });
+
+// @desc  Test email delivery workflow (Admin mode)
+// @route POST /api/reports/test-email
+exports.testEmailWorkflow = asyncHandler(async (req, res) => {
+  const EmailLog = require('../models/EmailLog');
+  const emailService = require('../services/emailService');
+
+  const { workflow, recipientEmail, ticketId } = req.body;
+  if (!recipientEmail || !workflow) {
+    return res.status(400).json({ success: false, message: 'recipientEmail and workflow are required' });
+  }
+
+  let ticket;
+  if (ticketId) {
+    ticket = await Ticket.findById(ticketId).populate('department', 'name').populate('category', 'name');
+  } else {
+    ticket = await Ticket.findOne({ isDeleted: false }).populate('department', 'name').populate('category', 'name').sort('-createdAt');
+  }
+
+  if (!ticket) {
+    ticket = {
+      _id: '6a7fee193f785d816c566499',
+      ticketNumber: 'TICK-TEST',
+      subject: 'Sample Student Support Request',
+      description: 'This is a sample test ticket description for verifying Gmail notifications.',
+      department: { name: 'IT Support' },
+      category: { name: 'Software Installation' },
+      priority: 'high',
+      createdAt: new Date(),
+    };
+  }
+
+  const sampleRequester = { name: 'Test Student', email: recipientEmail, requesterType: 'student' };
+  const sampleManager = { name: 'Test Department Manager', email: recipientEmail };
+  const sampleAgent = { name: 'Test Support Agent', email: recipientEmail };
+
+  if (workflow === 'ticket_created') {
+    await emailService.sendNewTicketToManager(ticket, sampleManager, sampleRequester);
+  } else if (workflow === 'ticket_assigned') {
+    await emailService.sendTicketAssignedToAgent(ticket, sampleAgent, sampleRequester);
+  } else if (workflow === 'ticket_resolved') {
+    ticket.resolvedAt = new Date();
+    ticket.resolutionSummary = 'Tested resolution details successfully verified in system.';
+    await emailService.sendTicketResolvedToStudent(ticket, sampleRequester);
+  } else {
+    return res.status(400).json({ success: false, message: 'Invalid workflow. Choose: ticket_created, ticket_assigned, or ticket_resolved' });
+  }
+
+  const logs = await EmailLog.find({ recipientEmail: recipientEmail.toLowerCase().trim() }).sort('-createdAt').limit(5);
+
+  res.json({
+    success: true,
+    message: `Test email workflow '${workflow}' executed for ${recipientEmail}`,
+    logs,
+  });
+});
+
+// @desc  Get email delivery logs
+// @route GET /api/reports/email-logs
+exports.getEmailLogs = asyncHandler(async (req, res) => {
+  const EmailLog = require('../models/EmailLog');
+  const { page, limit, skip } = getPagination(req.query);
+  const [logs, total] = await Promise.all([
+    EmailLog.find().populate('ticket', 'ticketNumber subject').sort('-createdAt').skip(skip).limit(limit),
+    EmailLog.countDocuments(),
+  ]);
+  res.json({ success: true, data: logs, pagination: paginateResults(total, page, limit) });
+});
+

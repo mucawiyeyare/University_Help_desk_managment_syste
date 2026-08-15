@@ -34,10 +34,9 @@ exports.createNotification = async ({ recipient, type, title, message, ticket })
 // ═══════════════════════════════════════════════════════════════════════════════
 // 1. TICKET CREATED
 //    - In-app notification to Admin & Department Manager
-//    - Email notification ONLY to Department Manager (NO email to Admin)
+//    - Real Gmail notification ONLY to Department Manager (NO email to Admin)
 // ═══════════════════════════════════════════════════════════════════════════════
 exports.notifyTicketCreated = async (ticket) => {
-  // Fetch requester full profile
   let requester = ticket.requester;
   if (requester && (!requester.name || !requester.email)) {
     try {
@@ -45,7 +44,7 @@ exports.notifyTicketCreated = async (ticket) => {
     } catch (_) {}
   }
 
-  // 1. In-app notification to System Admins (NO EMAIL)
+  // 1. In-app notification to System Admins (NO EMAIL TO ADMIN)
   try {
     const admins = await User.find({ role: 'admin', isActive: true }).select('_id name email');
     await Promise.all(
@@ -66,10 +65,9 @@ exports.notifyTicketCreated = async (ticket) => {
   // 2. Department manager lookup
   const managers = await getDepartmentManagers(ticket.department);
 
-  // 3. In-app notification + Email ONLY to Department Managers
+  // 3. In-app notification + Asynchronous Gmail ONLY to Department Managers
   await Promise.all(
     managers.map(async (manager) => {
-      // In-app notification for Manager
       await exports.createNotification({
         recipient: manager._id,
         type: 'department_ticket_created',
@@ -78,15 +76,16 @@ exports.notifyTicketCreated = async (ticket) => {
         ticket: ticket._id,
       });
 
-      // Email notification ONLY to Manager
-      try {
-        if (manager.email) {
-          await emailService.sendNewTicketToManager(ticket, manager, requester || {});
-          console.log(`[Email] New-ticket email sent to manager: ${manager.email}`);
+      // Background non-blocking email dispatch
+      setImmediate(async () => {
+        try {
+          if (manager.email) {
+            await emailService.sendNewTicketToManager(ticket, manager, requester || {});
+          }
+        } catch (emailErr) {
+          console.error(`[Email] Failed to send ticket creation email to manager ${manager.email}:`, emailErr.message);
         }
-      } catch (emailErr) {
-        console.error(`[Email] Failed to send new-ticket email to manager ${manager.email}:`, emailErr.message);
-      }
+      });
     })
   );
 };
@@ -112,27 +111,28 @@ exports.notifyTicketAssigned = async (ticket, agent, previousAgent) => {
       ticket: ticket._id,
     });
 
-    // 2. Email notification to assigned agent
-    try {
-      let agentRecord = ticket.assignedAgent;
-      if (!agentRecord?.email) {
-        agentRecord = await User.findById(getId(recipient)).select('name email');
-      }
+    // 2. Background non-blocking email notification to assigned agent
+    setImmediate(async () => {
+      try {
+        let agentRecord = ticket.assignedAgent;
+        if (!agentRecord?.email) {
+          agentRecord = await User.findById(getId(recipient)).select('name email');
+        }
 
-      let requester = ticket.requester;
-      if (requester && (!requester.name || !requester.email)) {
-        try {
-          requester = await User.findById(getId(ticket.requester)).select('name email requesterType');
-        } catch (_) {}
-      }
+        let requester = ticket.requester;
+        if (requester && (!requester.name || !requester.email)) {
+          try {
+            requester = await User.findById(getId(ticket.requester)).select('name email requesterType');
+          } catch (_) {}
+        }
 
-      if (agentRecord?.email) {
-        await emailService.sendTicketAssignedToAgent(ticket, agentRecord, requester || {});
-        console.log(`[Email] Assignment email sent to agent: ${agentRecord.email}`);
+        if (agentRecord?.email) {
+          await emailService.sendTicketAssignedToAgent(ticket, agentRecord, requester || {});
+        }
+      } catch (emailErr) {
+        console.error(`[Email] Failed to send assignment email to agent:`, emailErr.message);
       }
-    } catch (emailErr) {
-      console.error(`[Email] Failed to send assignment email to agent:`, emailErr.message);
-    }
+    });
   }
 
   // 3. In-app notification for previous agent (if reassigned)
@@ -168,20 +168,21 @@ exports.notifyTicketResolved = async (ticket, actor) => {
     });
   }
 
-  // 2. Email notification to student
-  try {
-    let requesterRecord = ticket.requester;
-    if (!requesterRecord?.email) {
-      requesterRecord = await User.findById(requesterId).select('name email');
-    }
+  // 2. Background non-blocking email notification to student
+  setImmediate(async () => {
+    try {
+      let requesterRecord = ticket.requester;
+      if (!requesterRecord?.email) {
+        requesterRecord = await User.findById(requesterId).select('name email');
+      }
 
-    if (requesterRecord?.email) {
-      await emailService.sendTicketResolvedToStudent(ticket, requesterRecord);
-      console.log(`[Email] Ticket resolved email sent to student: ${requesterRecord.email}`);
+      if (requesterRecord?.email) {
+        await emailService.sendTicketResolvedToStudent(ticket, requesterRecord);
+      }
+    } catch (emailErr) {
+      console.error(`[Email] Failed to send ticket resolved email to student:`, emailErr.message);
     }
-  } catch (emailErr) {
-    console.error(`[Email] Failed to send ticket resolved email to student:`, emailErr.message);
-  }
+  });
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -245,4 +246,3 @@ exports.notifySLAApproaching = async (ticket) => {
     )
   );
 };
-

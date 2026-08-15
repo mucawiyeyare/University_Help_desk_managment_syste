@@ -1,4 +1,5 @@
 const sendEmail = require('../config/email');
+const EmailLog = require('../models/EmailLog');
 
 // ─── Shared HTML Shell ────────────────────────────────────────────────────────
 const emailShell = (title, bodyContent) => `
@@ -80,88 +81,165 @@ const ctaButton = (href, label) => `
     </a>
   </div>`;
 
+// ─── Helper: Check duplicate email ───────────────────────────────────────────
+const isDuplicateEmail = async (ticketId, eventType, recipientEmail) => {
+  if (!ticketId || !eventType || !recipientEmail) return false;
+  const existing = await EmailLog.findOne({
+    ticket: ticketId,
+    eventType,
+    recipientEmail: recipientEmail.toLowerCase().trim(),
+    status: 'sent',
+  });
+  return !!existing;
+};
+
 // ═══════════════════════════════════════════════════════════════════════════════
-// 📧 EMAIL 1: New Ticket → Department Manager
+// 1. New Ticket Notification → Department Manager
 // ═══════════════════════════════════════════════════════════════════════════════
 exports.sendNewTicketToManager = async (ticket, manager, requester) => {
+  const recipientEmail = manager?.email;
+  if (!recipientEmail) return;
+
+  const eventType = 'ticket_created';
+  const ticketId = ticket._id;
+
+  // Deduplication Check
+  const duplicate = await isDuplicateEmail(ticketId, eventType, recipientEmail);
+  if (duplicate) {
+    console.log(`[Email Deduplication] Skipping duplicate '${eventType}' email to ${recipientEmail} for ticket ${ticket.ticketNumber}`);
+    return;
+  }
+
   const baseUrl = process.env.CLIENT_URL || 'https://huhelpdesk.iftiinhub.com';
   const ticketUrl = `${baseUrl}/tickets/${ticket._id}`;
-  const createdDate = new Date(ticket.createdAt).toLocaleString('en-US', {
+  const createdDate = new Date(ticket.createdAt || Date.now()).toLocaleString('en-US', {
     weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
   });
 
-  const body = `
-    <h2 style="margin:0 0 6px;color:#1e293b;font-size:20px;font-weight:700;">New Ticket in Your Department</h2>
+  const subject = `New Student Ticket Assigned to Your Department — Ticket #${ticket.ticketNumber}`;
+
+  const html = emailShell(
+    `New Ticket – ${ticket.ticketNumber}`,
+    `
+    <h2 style="margin:0 0 6px;color:#1e293b;font-size:20px;font-weight:700;">New Student Ticket in Your Department</h2>
     <p style="margin:0 0 24px;color:#64748b;font-size:14px;">
-      A new support ticket has been submitted and requires your attention.
+      Hi <strong>${manager.name || 'Department Manager'}</strong>, a new student ticket has been submitted and assigned to your department.
     </p>
 
-    <!-- Alert Box -->
     <div style="background:#eff6ff;border-left:4px solid #1a73e8;border-radius:6px;padding:16px 20px;margin-bottom:28px;">
       <p style="margin:0;color:#1d4ed8;font-size:14px;font-weight:600;">
-        👤 Submitted by: <span style="color:#1e293b;">${requester.name}</span>
-        &nbsp;·&nbsp;
-        <span style="color:#1a73e8;text-transform:capitalize;">${requester.requesterType || 'User'}</span>
+        👤 Student Name: <span style="color:#1e293b;">${requester.name || 'Student'}</span>
+        ${requester.requesterType ? `&nbsp;·&nbsp;<span style="color:#1a73e8;text-transform:capitalize;">${requester.requesterType}</span>` : ''}
       </p>
     </div>
 
-    <!-- Ticket Details Table -->
     <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px;">
-      ${infoRow('🎫 Ticket No.', `<strong>${ticket.ticketNumber}</strong>`)}
+      ${infoRow('🎫 Ticket ID', `<strong>${ticket.ticketNumber}</strong>`)}
       ${infoRow('📌 Subject', ticket.subject)}
       ${infoRow('🏢 Department', ticket.department?.name || 'N/A')}
       ${infoRow('📂 Category', ticket.category?.name || 'N/A')}
       ${infoRow('⚡ Priority', priorityBadge(ticket.priority))}
-      ${infoRow('🕐 Submitted At', createdDate)}
+      ${infoRow('🕐 Created At', createdDate)}
     </table>
 
-    <!-- Description Snippet -->
     ${ticket.description ? `
     <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px 20px;margin-top:20px;">
-      <p style="margin:0 0 6px;color:#64748b;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Description</p>
+      <p style="margin:0 0 6px;color:#64748b;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Short Description</p>
       <p style="margin:0;color:#374151;font-size:14px;line-height:1.6;">${ticket.description.substring(0, 300)}${ticket.description.length > 300 ? '...' : ''}</p>
     </div>` : ''}
 
-    ${ctaButton(ticketUrl, '🔍 View Ticket →')}
+    ${ctaButton(ticketUrl, '🔍 Open Ticket in System →')}
+    `
+  );
 
-    <p style="text-align:center;margin-top:16px;color:#94a3b8;font-size:12px;">
-      As the department manager, please review and assign this ticket promptly.
-    </p>`;
+  const text = `University Help Desk Management System — New Ticket Notification\n\n` +
+    `Hi ${manager.name || 'Department Manager'},\n\n` +
+    `A new student ticket has been submitted and assigned to your department.\n\n` +
+    `Student Name: ${requester.name || 'Student'}\n` +
+    `Ticket ID: ${ticket.ticketNumber}\n` +
+    `Subject: ${ticket.subject}\n` +
+    `Department: ${ticket.department?.name || 'N/A'}\n` +
+    `Category: ${ticket.category?.name || 'N/A'}\n` +
+    `Created At: ${createdDate}\n\n` +
+    `Description: ${ticket.description || 'N/A'}\n\n` +
+    `Open Ticket in System: ${ticketUrl}\n`;
 
-  await sendEmail({
-    to: manager.email,
-    subject: `🎫 New Ticket [${ticket.ticketNumber}] — ${ticket.subject}`,
-    html: emailShell(`New Ticket – ${ticket.ticketNumber}`, body),
-  });
+  try {
+    const result = await sendEmail({ to: recipientEmail, subject, html, text });
+    if (result?.success) {
+      await EmailLog.create({
+        ticket: ticketId,
+        eventType,
+        recipientEmail,
+        subject,
+        status: 'sent',
+        messageId: result.messageId,
+      });
+    } else if (result?.skipped) {
+      await EmailLog.create({
+        ticket: ticketId,
+        eventType,
+        recipientEmail,
+        subject,
+        status: 'skipped',
+        error: result.reason,
+      });
+    }
+  } catch (err) {
+    await EmailLog.create({
+      ticket: ticketId,
+      eventType,
+      recipientEmail,
+      subject,
+      status: 'failed',
+      error: err.message,
+    });
+    console.error('[Email Service] Error in sendNewTicketToManager:', err.message);
+  }
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 📧 EMAIL 2: Ticket Assigned → Agent
+// 2. Ticket Assignment Notification → Agent
 // ═══════════════════════════════════════════════════════════════════════════════
 exports.sendTicketAssignedToAgent = async (ticket, agent, requester) => {
+  const recipientEmail = agent?.email;
+  if (!recipientEmail) return;
+
+  const eventType = 'ticket_assigned';
+  const ticketId = ticket._id;
+
+  // Deduplication Check
+  const duplicate = await isDuplicateEmail(ticketId, eventType, recipientEmail);
+  if (duplicate) {
+    console.log(`[Email Deduplication] Skipping duplicate '${eventType}' email to ${recipientEmail} for ticket ${ticket.ticketNumber}`);
+    return;
+  }
+
   const baseUrl = process.env.CLIENT_URL || 'https://huhelpdesk.iftiinhub.com';
   const ticketUrl = `${baseUrl}/tickets/${ticket._id}`;
   const assignedDate = new Date().toLocaleString('en-US', {
     weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
   });
 
-  const body = `
-    <h2 style="margin:0 0 6px;color:#1e293b;font-size:20px;font-weight:700;">Ticket Assigned to You</h2>
+  const subject = `You Have Been Assigned a Student Ticket — Ticket #${ticket.ticketNumber}`;
+
+  const html = emailShell(
+    `Ticket Assigned – ${ticket.ticketNumber}`,
+    `
+    <h2 style="margin:0 0 6px;color:#1e293b;font-size:20px;font-weight:700;">You Have Been Assigned a Student Ticket</h2>
     <p style="margin:0 0 24px;color:#64748b;font-size:14px;">
-      Hi <strong>${agent.name}</strong>, a support ticket has been assigned to you by an Administrator or Department Manager. Please review it below.
+      Hi <strong>${agent.name || 'Agent'}</strong>, an Administrator or Department Manager has assigned a student support ticket to you.
     </p>
 
-    <!-- Alert Box -->
     <div style="background:#f0fdf4;border-left:4px solid #16a34a;border-radius:6px;padding:16px 20px;margin-bottom:28px;">
       <p style="margin:0;color:#15803d;font-size:14px;font-weight:600;">
-        👤 Submitted by: <span style="color:#1e293b;">${requester ? requester.name : 'Unknown User'}</span>
+        👤 Student Name: <span style="color:#1e293b;">${requester ? requester.name : 'Student'}</span>
         ${requester?.requesterType ? `&nbsp;·&nbsp;<span style="color:#16a34a;text-transform:capitalize;">${requester.requesterType}</span>` : ''}
       </p>
     </div>
 
-    <!-- Ticket Details Table -->
     <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px;">
-      ${infoRow('🎫 Ticket No.', `<strong>${ticket.ticketNumber}</strong>`)}
+      ${infoRow('🎫 Ticket ID', `<strong>${ticket.ticketNumber}</strong>`)}
       ${infoRow('📌 Subject', ticket.subject)}
       ${infoRow('🏢 Department', ticket.department?.name || 'N/A')}
       ${infoRow('📂 Category', ticket.category?.name || 'N/A')}
@@ -169,50 +247,100 @@ exports.sendTicketAssignedToAgent = async (ticket, agent, requester) => {
       ${infoRow('📅 Assigned At', assignedDate)}
     </table>
 
-    <!-- Description Snippet -->
     ${ticket.description ? `
     <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px 20px;margin-top:20px;">
       <p style="margin:0 0 6px;color:#64748b;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Ticket Description</p>
       <p style="margin:0;color:#374151;font-size:14px;line-height:1.6;">${ticket.description.substring(0, 300)}${ticket.description.length > 300 ? '...' : ''}</p>
     </div>` : ''}
 
-    ${ctaButton(ticketUrl, '📋 Open Ticket →')}
+    ${ctaButton(ticketUrl, '📋 Open Ticket in System →')}
+    `
+  );
 
-    <p style="text-align:center;margin-top:16px;color:#94a3b8;font-size:12px;">
-      Please respond within the SLA timeframe for this ticket's priority level.
-    </p>`;
+  const text = `University Help Desk Management System — Ticket Assignment Notification\n\n` +
+    `Hi ${agent.name || 'Agent'},\n\n` +
+    `You have been assigned a student support ticket.\n\n` +
+    `Student Name: ${requester?.name || 'Student'}\n` +
+    `Ticket ID: ${ticket.ticketNumber}\n` +
+    `Subject: ${ticket.subject}\n` +
+    `Department: ${ticket.department?.name || 'N/A'}\n` +
+    `Category: ${ticket.category?.name || 'N/A'}\n` +
+    `Assigned At: ${assignedDate}\n\n` +
+    `Open Ticket in System: ${ticketUrl}\n`;
 
-  await sendEmail({
-    to: agent.email,
-    subject: `📋 Ticket Assigned [${ticket.ticketNumber}] — ${ticket.subject}`,
-    html: emailShell(`Ticket Assigned – ${ticket.ticketNumber}`, body),
-  });
+  try {
+    const result = await sendEmail({ to: recipientEmail, subject, html, text });
+    if (result?.success) {
+      await EmailLog.create({
+        ticket: ticketId,
+        eventType,
+        recipientEmail,
+        subject,
+        status: 'sent',
+        messageId: result.messageId,
+      });
+    } else if (result?.skipped) {
+      await EmailLog.create({
+        ticket: ticketId,
+        eventType,
+        recipientEmail,
+        subject,
+        status: 'skipped',
+        error: result.reason,
+      });
+    }
+  } catch (err) {
+    await EmailLog.create({
+      ticket: ticketId,
+      eventType,
+      recipientEmail,
+      subject,
+      status: 'failed',
+      error: err.message,
+    });
+    console.error('[Email Service] Error in sendTicketAssignedToAgent:', err.message);
+  }
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 📧 EMAIL 3: Ticket Resolved → Student (Requester)
+// 3. Ticket Resolution Notification → Student
 // ═══════════════════════════════════════════════════════════════════════════════
 exports.sendTicketResolvedToStudent = async (ticket, requester) => {
+  const recipientEmail = requester?.email;
+  if (!recipientEmail) return;
+
+  const eventType = 'ticket_resolved';
+  const ticketId = ticket._id;
+
+  // Deduplication Check
+  const duplicate = await isDuplicateEmail(ticketId, eventType, recipientEmail);
+  if (duplicate) {
+    console.log(`[Email Deduplication] Skipping duplicate '${eventType}' email to ${recipientEmail} for ticket ${ticket.ticketNumber}`);
+    return;
+  }
+
   const baseUrl = process.env.CLIENT_URL || 'https://huhelpdesk.iftiinhub.com';
   const ticketUrl = `${baseUrl}/tickets/${ticket._id}`;
   const resolvedDate = new Date(ticket.resolvedAt || Date.now()).toLocaleString('en-US', {
     weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
   });
 
-  const body = `
-    <h2 style="margin:0 0 6px;color:#1e293b;font-size:20px;font-weight:700;">Your Support Ticket Has Been Resolved</h2>
+  const subject = `Your Student Support Ticket Has Been Resolved — Ticket #${ticket.ticketNumber}`;
+
+  const html = emailShell(
+    `Ticket Resolved – ${ticket.ticketNumber}`,
+    `
+    <h2 style="margin:0 0 6px;color:#1e293b;font-size:20px;font-weight:700;">Your Student Support Ticket Has Been Resolved</h2>
     <p style="margin:0 0 24px;color:#64748b;font-size:14px;">
-      Hi <strong>${requester.name}</strong>, your ticket has been marked as <strong>Resolved</strong> by our support team.
+      Hi <strong>${requester.name || 'Student'}</strong>, your support ticket has been marked as <strong>Resolved</strong> by our support team.
     </p>
 
-    <!-- Success Box -->
     <div style="background:#f0fdf4;border-left:4px solid #16a34a;border-radius:6px;padding:16px 20px;margin-bottom:28px;">
       <p style="margin:0;color:#15803d;font-size:14px;font-weight:600;">
-        ✅ Status: <span style="color:#16a34a;font-weight:700;">Resolved</span>
+        ✅ Resolution Status: <span style="color:#16a34a;font-weight:700;">Resolved</span>
       </p>
     </div>
 
-    <!-- Ticket Details Table -->
     <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px;">
       ${infoRow('🎫 Ticket ID', `<strong>${ticket.ticketNumber}</strong>`)}
       ${infoRow('📌 Subject', ticket.subject)}
@@ -221,50 +349,62 @@ exports.sendTicketResolvedToStudent = async (ticket, requester) => {
       ${infoRow('📅 Resolved Date', resolvedDate)}
     </table>
 
-    <!-- Resolution Details Box (if available) -->
     ${ticket.resolutionSummary ? `
     <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px 20px;margin-top:20px;">
       <p style="margin:0 0 6px;color:#64748b;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Resolution Details</p>
       <p style="margin:0;color:#374151;font-size:14px;line-height:1.6;">${ticket.resolutionSummary}</p>
     </div>` : ''}
 
-    ${ctaButton(ticketUrl, '🔍 View Ticket Details →')}
+    ${ctaButton(ticketUrl, '🔍 View Resolved Ticket →')}
 
     <p style="text-align:center;margin-top:20px;color:#94a3b8;font-size:12px;">
       If your issue is not completely resolved or you need further assistance, you can view or re-open the ticket directly from the portal.
-    </p>`;
+    </p>
+    `
+  );
 
-  await sendEmail({
-    to: requester.email,
-    subject: `✅ Ticket Resolved [${ticket.ticketNumber}] — ${ticket.subject}`,
-    html: emailShell(`Ticket Resolved – ${ticket.ticketNumber}`, body),
-  });
+  const text = `University Help Desk Management System — Ticket Resolution Notification\n\n` +
+    `Hi ${requester.name || 'Student'},\n\n` +
+    `Your student support ticket has been marked as Resolved.\n\n` +
+    `Ticket ID: ${ticket.ticketNumber}\n` +
+    `Subject: ${ticket.subject}\n` +
+    `Department: ${ticket.department?.name || 'N/A'}\n` +
+    `Category: ${ticket.category?.name || 'N/A'}\n` +
+    `Resolution Status: Resolved\n` +
+    `Resolved Date: ${resolvedDate}\n\n` +
+    `${ticket.resolutionSummary ? `Resolution Details: ${ticket.resolutionSummary}\n\n` : ''}` +
+    `View Resolved Ticket: ${ticketUrl}\n`;
+
+  try {
+    const result = await sendEmail({ to: recipientEmail, subject, html, text });
+    if (result?.success) {
+      await EmailLog.create({
+        ticket: ticketId,
+        eventType,
+        recipientEmail,
+        subject,
+        status: 'sent',
+        messageId: result.messageId,
+      });
+    } else if (result?.skipped) {
+      await EmailLog.create({
+        ticket: ticketId,
+        eventType,
+        recipientEmail,
+        subject,
+        status: 'skipped',
+        error: result.reason,
+      });
+    }
+  } catch (err) {
+    await EmailLog.create({
+      ticket: ticketId,
+      eventType,
+      recipientEmail,
+      subject,
+      status: 'failed',
+      error: err.message,
+    });
+    console.error('[Email Service] Error in sendTicketResolvedToStudent:', err.message);
+  }
 };
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// Legacy / Fallback email helpers
-// ═══════════════════════════════════════════════════════════════════════════════
-exports.sendTicketCreatedEmail = async (ticket, requester) => {
-  const html = `<h2>Ticket Created: ${ticket.ticketNumber}</h2><p>Hi ${requester.name},</p><p>Your ticket "${ticket.subject}" has been created successfully.</p>`;
-  await sendEmail({ to: requester.email, subject: `Ticket Created - ${ticket.ticketNumber}`, html });
-};
-
-exports.sendTicketAssignedEmail = async (ticket, agent) => {
-  const html = `<h2>Ticket Assigned: ${ticket.ticketNumber}</h2><p>Hi ${agent.name},</p><p>Ticket "${ticket.subject}" has been assigned to you.</p>`;
-  await sendEmail({ to: agent.email, subject: `Ticket Assigned - ${ticket.ticketNumber}`, html });
-};
-
-exports.sendAgentReplyEmail = async (ticket, requester, comment) => {
-  const html = `<h2>New Reply on Ticket: ${ticket.ticketNumber}</h2><p>Hi ${requester.name},</p><p>An agent has replied to your ticket:</p><p>${comment.body}</p>`;
-  await sendEmail({ to: requester.email, subject: `New Reply - ${ticket.ticketNumber}`, html });
-};
-
-exports.sendTicketResolvedEmail = async (ticket, requester) => {
-  return exports.sendTicketResolvedToStudent(ticket, requester);
-};
-
-exports.sendPasswordResetEmail = async (user, resetUrl) => {
-  const html = `<h2>Password Reset Request</h2><p>Please click the link below to reset your password:</p><a href="${resetUrl}">${resetUrl}</a>`;
-  await sendEmail({ to: user.email, subject: 'Password Reset', html });
-};
-
