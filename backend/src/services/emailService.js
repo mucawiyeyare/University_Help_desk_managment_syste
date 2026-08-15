@@ -16,13 +16,25 @@ const emailShell = (title, bodyContent) => `
       <td align="center">
         <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.10);">
 
-          <!-- Header -->
+          <!-- University Logo Header -->
           <tr>
-            <td style="background:linear-gradient(135deg,#1a73e8 0%,#0d47a1 100%);padding:32px 40px;text-align:center;">
-              <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:0.5px;">
-                🎓 University Help Desk
+            <td style="background:#ffffff;padding:24px 40px 0;text-align:center;">
+              <img
+                src="https://huhelpdesk.iftiinhub.com/hormuud-logo.png"
+                alt="Hormuud University"
+                width="90"
+                style="display:block;margin:0 auto;width:90px;height:auto;"
+              />
+            </td>
+          </tr>
+
+          <!-- Brand Bar -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#15803d 0%,#166534 100%);padding:20px 40px 24px;text-align:center;">
+              <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;letter-spacing:0.5px;">
+                Hormuud University
               </h1>
-              <p style="margin:6px 0 0;color:#bbdefb;font-size:13px;">Management System — Automated Notification</p>
+              <p style="margin:4px 0 0;color:#bbf7d0;font-size:13px;">Help Desk Management System — Automated Notification</p>
             </td>
           </tr>
 
@@ -37,8 +49,8 @@ const emailShell = (title, bodyContent) => `
           <tr>
             <td style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:20px 40px;text-align:center;">
               <p style="margin:0;color:#94a3b8;font-size:12px;">
-                This is an automated message from the University Help Desk Management System.<br/>
-                Please do not reply to this email.
+                This is an automated message from the Hormuud University Help Desk Management System.<br/>
+                Please do not reply to this email. Visit <a href="https://huhelpdesk.iftiinhub.com" style="color:#15803d;text-decoration:none;">huhelpdesk.iftiinhub.com</a> for support.
               </p>
             </td>
           </tr>
@@ -49,6 +61,7 @@ const emailShell = (title, bodyContent) => `
   </table>
 </body>
 </html>`;
+
 
 // ─── Priority Badge Helper ────────────────────────────────────────────────────
 const priorityBadge = (priority = 'medium') => {
