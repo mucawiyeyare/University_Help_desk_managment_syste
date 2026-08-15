@@ -162,36 +162,7 @@ export default function Login() {
             </button>
           </form>
 
-          <div
-            className="mt-5 p-3 rounded-xl text-[11px]"
-            style={{
-              background: isDark ? '#111111' : '#F4FBF6',
-              border: `1px solid ${isDark ? '#2D4A36' : '#B9DEC5'}`,
-            }}
-          >
-            <p className="font-semibold mb-1.5 flex items-center gap-1" style={{ color: isDark ? '#F4FFF7' : '#16331F' }}>
-              <KeyRound className="w-3.5 h-3.5" style={{ color: '#15803D' }} /> Quick Demo Credentials
-            </p>
-            <div className="space-y-1" style={{ color: isDark ? '#A7B8AC' : '#587060' }}>
-              {[
-                { label: 'Admin:', email: 'admin@uhdms.edu', password: 'Admin@123456' },
-                { label: 'Manager:', email: 'manager.it@uhdms.edu', password: 'Password@123' },
-                { label: 'Agent:', email: 'agent.it@uhdms.edu', password: 'Password@123' },
-                { label: 'Student:', email: 'student@uhdms.edu', password: 'Password@123' },
-              ].map((account) => (
-                <div key={account.label} className="flex justify-between items-center gap-2">
-                  <span>{account.label}</span>
-                  <button
-                    type="button"
-                    onClick={() => { setEmail(account.email); setPassword(account.password); }}
-                    className="font-medium text-green-700 hover:text-green-600 hover:underline transition-colors truncate"
-                  >
-                    {account.email}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
+
 
           <p className="mt-5 text-center text-xs" style={{ color: isDark ? '#A7B8AC' : '#587060' }}>
             Don't have an account?{' '}
