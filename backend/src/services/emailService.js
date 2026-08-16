@@ -1,21 +1,5 @@
 const sendEmail = require('../config/email');
 const EmailLog = require('../models/EmailLog');
-const fs = require('fs');
-const path = require('path');
-
-// Embed logo as base64 CID so Gmail shows it without blocking external URLs
-const logoPath = path.join(__dirname, '../../../frontend/public/hormuud-logo.png');
-const logoBase64 = fs.existsSync(logoPath)
-  ? fs.readFileSync(logoPath).toString('base64')
-  : null;
-
-// Attachment definition passed to every email
-const logoAttachment = logoBase64 ? [{
-  filename: 'hormuud-logo.png',
-  content: logoBase64,
-  encoding: 'base64',
-  cid: 'uhdms-logo',  // referenced in HTML as src="cid:uhdms-logo"
-}] : [];
 
 // ─── Shared HTML Shell ────────────────────────────────────────────────────────
 const emailShell = (title, bodyContent) => `
@@ -26,47 +10,50 @@ const emailShell = (title, bodyContent) => `
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>${title}</title>
 </head>
-<body style="margin:0;padding:0;background:#f0f4f8;font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4f8;padding:40px 0;">
+<body style="margin:0;padding:0;background:#f0f4f8;font-family:'Segoe UI',Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4f8;padding:30px 10px;">
     <tr>
       <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.10);">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:580px;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.08);border:1px solid #e2e8f0;">
 
-          <!-- University Logo Header -->
+          <!-- Branded Header with Logo -->
           <tr>
-            <td style="background:#ffffff;padding:24px 40px 0;text-align:center;">
-              <img
-                src="cid:uhdms-logo"
-                alt="Hormuud University"
-                width="100"
-                style="display:block;margin:0 auto;width:100px;height:auto;"
-              />
-            </td>
-          </tr>
-
-          <!-- Brand Bar -->
-          <tr>
-            <td style="background:linear-gradient(135deg,#15803d 0%,#166534 100%);padding:20px 40px 24px;text-align:center;">
-              <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;letter-spacing:0.5px;">
+            <td style="background:linear-gradient(135deg,#15803d 0%,#166534 100%);padding:26px 24px;text-align:center;">
+              <table align="center" cellpadding="0" cellspacing="0" style="margin:0 auto 12px auto;">
+                <tr>
+                  <td style="background:#ffffff;padding:6px 12px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.15);text-align:center;">
+                    <img
+                      src="https://huhelpdesk.iftiinhub.com/hormuud-logo.png"
+                      alt="Hormuud University"
+                      width="54"
+                      height="64"
+                      style="display:block;margin:0 auto;width:54px;height:auto;border:0;outline:none;text-decoration:none;"
+                    />
+                  </td>
+                </tr>
+              </table>
+              <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:800;letter-spacing:0.3px;font-family:'Segoe UI',Arial,sans-serif;">
                 Hormuud University
               </h1>
-              <p style="margin:4px 0 0;color:#bbf7d0;font-size:13px;">Help Desk Management System — Automated Notification</p>
+              <p style="margin:4px 0 0;color:#bbf7d0;font-size:12.5px;font-weight:500;">
+                Help Desk Management System
+              </p>
             </td>
           </tr>
 
           <!-- Body -->
           <tr>
-            <td style="padding:36px 40px 28px;">
+            <td style="padding:32px 32px 24px;">
               ${bodyContent}
             </td>
           </tr>
 
           <!-- Footer -->
           <tr>
-            <td style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:20px 40px;text-align:center;">
-              <p style="margin:0;color:#94a3b8;font-size:12px;">
-                This is an automated message from the Hormuud University Help Desk Management System.<br/>
-                Please do not reply to this email. Visit <a href="https://huhelpdesk.iftiinhub.com" style="color:#15803d;text-decoration:none;">huhelpdesk.iftiinhub.com</a> for support.
+            <td style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:20px 32px;text-align:center;">
+              <p style="margin:0;color:#94a3b8;font-size:12px;line-height:1.5;">
+                This is an automated notification from the Hormuud University Help Desk.<br/>
+                Please do not reply directly to this email. Visit <a href="https://huhelpdesk.iftiinhub.com" style="color:#15803d;font-weight:600;text-decoration:none;">huhelpdesk.iftiinhub.com</a> for support.
               </p>
             </td>
           </tr>
@@ -194,7 +181,7 @@ exports.sendNewTicketToManager = async (ticket, manager, requester) => {
     `Open Ticket in System: ${ticketUrl}\n`;
 
   try {
-    const result = await sendEmail({ to: recipientEmail, subject, html, text, attachments: logoAttachment });
+    const result = await sendEmail({ to: recipientEmail, subject, html, text });
     if (result?.success) {
       await EmailLog.create({
         ticket: ticketId,
@@ -298,7 +285,7 @@ exports.sendTicketAssignedToAgent = async (ticket, agent, requester) => {
     `Open Ticket in System: ${ticketUrl}\n`;
 
   try {
-    const result = await sendEmail({ to: recipientEmail, subject, html, text, attachments: logoAttachment });
+    const result = await sendEmail({ to: recipientEmail, subject, html, text });
     if (result?.success) {
       await EmailLog.create({
         ticket: ticketId,
@@ -405,7 +392,7 @@ exports.sendTicketResolvedToStudent = async (ticket, requester) => {
     `View Resolved Ticket: ${ticketUrl}\n`;
 
   try {
-    const result = await sendEmail({ to: recipientEmail, subject, html, text, attachments: logoAttachment });
+    const result = await sendEmail({ to: recipientEmail, subject, html, text });
     if (result?.success) {
       await EmailLog.create({
         ticket: ticketId,
