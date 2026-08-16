@@ -317,15 +317,7 @@ export default function UserManagement({ managerMode = false }) {
                   </select>
                 </div>
               </div>
-              <div>
-                <label className="block font-semibold mb-1" style={{ color: 'var(--color-text)' }}>Requester Type</label>
-                <select value={formData.requesterType} onChange={(e) => setFormData({ ...formData, requesterType: e.target.value })} className="input-field">
-                  <option value="student">Student</option>
-                  <option value="lecturer">Lecturer</option>
-                  <option value="staff">Staff</option>
-                  <option value="external">External User</option>
-                </select>
-              </div>
+
             </>
           )}
           <div>
