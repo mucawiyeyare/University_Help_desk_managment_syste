@@ -49,7 +49,7 @@ const sendEmail = async (options) => {
 
   try {
     const transporter = createTransporter();
-    const fromAddress = process.env.EMAIL_FROM || `"University Help Desk System" <${user}>`;
+    const fromAddress = `"Hormuud University Help Desk" <${user}>`;
 
     // Generate plain-text fallback from HTML if text not explicitly provided
     const plainText = options.text || options.html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
@@ -60,11 +60,8 @@ const sendEmail = async (options) => {
       subject: options.subject,
       html: options.html,
       text: plainText,
-      headers: {
-        'X-Priority': '1',
-        'X-MSMail-Priority': 'High',
-        'Importance': 'high',
-      },
+      // Pass through CID attachments (embedded images)
+      attachments: options.attachments || [],
     };
 
     const info = await transporter.sendMail(message);

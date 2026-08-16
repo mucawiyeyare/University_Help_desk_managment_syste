@@ -1,5 +1,21 @@
 const sendEmail = require('../config/email');
 const EmailLog = require('../models/EmailLog');
+const fs = require('fs');
+const path = require('path');
+
+// Embed logo as base64 CID so Gmail shows it without blocking external URLs
+const logoPath = path.join(__dirname, '../../../frontend/public/hormuud-logo.png');
+const logoBase64 = fs.existsSync(logoPath)
+  ? fs.readFileSync(logoPath).toString('base64')
+  : null;
+
+// Attachment definition passed to every email
+const logoAttachment = logoBase64 ? [{
+  filename: 'hormuud-logo.png',
+  content: logoBase64,
+  encoding: 'base64',
+  cid: 'uhdms-logo',  // referenced in HTML as src="cid:uhdms-logo"
+}] : [];
 
 // ─── Shared HTML Shell ────────────────────────────────────────────────────────
 const emailShell = (title, bodyContent) => `
@@ -20,10 +36,10 @@ const emailShell = (title, bodyContent) => `
           <tr>
             <td style="background:#ffffff;padding:24px 40px 0;text-align:center;">
               <img
-                src="https://huhelpdesk.iftiinhub.com/hormuud-logo.png"
+                src="cid:uhdms-logo"
                 alt="Hormuud University"
-                width="90"
-                style="display:block;margin:0 auto;width:90px;height:auto;"
+                width="100"
+                style="display:block;margin:0 auto;width:100px;height:auto;"
               />
             </td>
           </tr>
@@ -178,7 +194,7 @@ exports.sendNewTicketToManager = async (ticket, manager, requester) => {
     `Open Ticket in System: ${ticketUrl}\n`;
 
   try {
-    const result = await sendEmail({ to: recipientEmail, subject, html, text });
+    const result = await sendEmail({ to: recipientEmail, subject, html, text, attachments: logoAttachment });
     if (result?.success) {
       await EmailLog.create({
         ticket: ticketId,
@@ -282,7 +298,7 @@ exports.sendTicketAssignedToAgent = async (ticket, agent, requester) => {
     `Open Ticket in System: ${ticketUrl}\n`;
 
   try {
-    const result = await sendEmail({ to: recipientEmail, subject, html, text });
+    const result = await sendEmail({ to: recipientEmail, subject, html, text, attachments: logoAttachment });
     if (result?.success) {
       await EmailLog.create({
         ticket: ticketId,
@@ -389,7 +405,7 @@ exports.sendTicketResolvedToStudent = async (ticket, requester) => {
     `View Resolved Ticket: ${ticketUrl}\n`;
 
   try {
-    const result = await sendEmail({ to: recipientEmail, subject, html, text });
+    const result = await sendEmail({ to: recipientEmail, subject, html, text, attachments: logoAttachment });
     if (result?.success) {
       await EmailLog.create({
         ticket: ticketId,
