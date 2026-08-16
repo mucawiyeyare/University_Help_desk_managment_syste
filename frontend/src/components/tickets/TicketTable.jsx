@@ -132,56 +132,50 @@ export default function TicketTable({ tickets = [], loading, showSearch = true, 
                 <th className="py-3 px-4">Ticket #</th>
                 <th className="py-3 px-4">Subject</th>
                 <th className="py-3 px-4">Requester</th>
+                <th className="py-3 px-4">Department</th>
                 <th className="py-3 px-4">Priority</th>
-                <th className="py-3 px-4">SLA</th>
                 <th className="py-3 px-4">Status</th>
                 <th className="py-3 px-4">Assigned Agent</th>
-                <th className="py-3 px-4">Dept</th>
                 <th className="py-3 px-4 text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredTickets.map((t) => {
-                const slaState = getTicketSLAState(t);
-                const assignmentState = getTicketAssignmentState(t);
-                const rowBackground = slaState?.rowBackground || assignmentState?.rowBackground || 'transparent';
-                const rowHoverBackground = slaState?.rowHoverBackground || assignmentState?.rowHoverBackground || 'var(--color-surface2)';
-                return (
-                  <tr
-                    key={t._id}
-                    className="border-b transition-colors"
-                    style={{ borderColor: 'var(--color-border)', background: rowBackground }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = rowHoverBackground)}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = rowBackground)}
-                  >
-                  <td className="py-3 px-4 font-mono font-semibold" style={{ color: 'var(--color-accent)' }}>
+              {filteredTickets.map((t) => (
+                <tr
+                  key={t._id}
+                  className="transition-colors"
+                  style={{ borderBottom: '1px solid var(--color-border)' }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--color-surface2)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                >
+                  <td className="py-3 px-4 font-mono font-bold" style={{ color: 'var(--color-accent)' }}>
                     <Link to={`/tickets/${t._id}`} className="hover:underline">
                       {t.ticketNumber}
                     </Link>
                   </td>
-                  <td className="py-3 px-4 font-medium max-w-xs truncate" style={{ color: 'var(--color-text)' }}>
+                  <td className="py-3 px-4 font-semibold max-w-xs truncate" style={{ color: 'var(--color-text)' }}>
                     <Link to={`/tickets/${t._id}`} className="hover:opacity-75 transition-opacity">
                       {t.subject}
                     </Link>
                     {t.attachments?.length > 0 && (
-                      <Paperclip className="inline-block w-3 h-3 ml-2" style={{ color: 'var(--color-text-muted)' }} />
+                      <Paperclip className="inline-block w-3 h-3 ml-1.5" style={{ color: 'var(--color-text-muted)' }} />
                     )}
                   </td>
                   <td className="py-3 px-4" style={{ color: 'var(--color-text-muted)' }}>
                     {t.requester?.name || 'Unknown'}
                   </td>
-                  <td className="py-3 px-4">
-                    <Badge type="priority" value={t.priority} />
+                  <td className="py-3 px-4" style={{ color: 'var(--color-text-muted)' }}>
+                    {t.department?.name || 'General'}
                   </td>
                   <td className="py-3 px-4">
-                    <TicketSLAStatus ticket={t} compact />
+                    <Badge type="priority" value={t.priority} />
                   </td>
                   <td className="py-3 px-4">
                     {isStaff ? (
                       <select
                         value={t.status}
                         onChange={(e) => handleQuickStatusChange(t._id, e.target.value)}
-                        className="text-xs px-2 py-0.5 rounded border outline-none cursor-pointer"
+                        className="text-xs px-2 py-1 rounded border outline-none cursor-pointer font-medium"
                         style={{ background: 'var(--input-bg)', borderColor: 'var(--input-border)', color: 'var(--input-text)' }}
                       >
                         <option value="new">New</option>
@@ -195,39 +189,36 @@ export default function TicketTable({ tickets = [], loading, showSearch = true, 
                       <Badge type="status" value={t.status} />
                     )}
                   </td>
-                  <td className="py-3 px-4 text-xs font-medium">
+                  <td className="py-3 px-4 text-xs">
                     {t.assignedAgent?.name ? (
-                      <span className="text-emerald-400 font-semibold">{t.assignedAgent.name}</span>
+                      <span className="font-semibold" style={{ color: '#0F7D4B' }}>{t.assignedAgent.name}</span>
                     ) : (
-                      <span className="text-rose-400 italic font-semibold">Unassigned</span>
+                      <span className="text-amber-500 italic font-medium">Unassigned</span>
                     )}
                   </td>
-                  <td className="py-3 px-4" style={{ color: 'var(--color-text-muted)' }}>
-                    {t.department?.name || 'General'}
-                  </td>
                   <td className="py-3 px-4 text-center">
-                    <div className="flex items-center justify-center gap-1.5">
+                    <div className="flex items-center justify-center gap-1">
                       <Link
                         to={`/tickets/${t._id}`}
-                        className="p-1.5 rounded bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20"
+                        className="p-1.5 rounded-lg transition-colors hover:bg-slate-500/10"
+                        style={{ color: 'var(--color-text-muted)' }}
                         title="View Details"
                       >
-                        <Eye className="w-3.5 h-3.5" />
+                        <Eye className="w-4 h-4" />
                       </Link>
                       {isManagerOrAdmin && (
                         <button
                           onClick={() => openAssignModal(t)}
-                          className="p-1.5 rounded bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"
+                          className="p-1.5 rounded-lg transition-colors text-amber-500 hover:bg-amber-500/10"
                           title="Assign Agent"
                         >
-                          <UserCheck className="w-3.5 h-3.5" />
+                          <UserCheck className="w-4 h-4" />
                         </button>
                       )}
                     </div>
                   </td>
-                  </tr>
-                );
-              })}
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

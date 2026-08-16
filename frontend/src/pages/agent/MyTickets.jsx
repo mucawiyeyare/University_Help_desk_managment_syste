@@ -139,55 +139,50 @@ export default function AgentMyTickets() {
                   className="text-[11px] uppercase tracking-wider font-semibold border-b"
                   style={{ background: 'var(--color-surface2)', borderColor: 'var(--color-border)', color: 'var(--color-text-muted)' }}
                 >
-                  <th className="py-3.5 px-4">Ticket #</th>
-                  <th className="py-3.5 px-4">Subject</th>
-                  <th className="py-3.5 px-4">Requester</th>
-                  <th className="py-3.5 px-4">Priority</th>
-                  <th className="py-3.5 px-4">SLA</th>
-                  <th className="py-3.5 px-4">Update Status</th>
-                  <th className="py-3.5 px-4">Department</th>
-                  <th className="py-3.5 px-4">Created</th>
-                  <th className="py-3.5 px-4 text-center">Action</th>
+                  <th className="py-3 px-4">Ticket #</th>
+                  <th className="py-3 px-4">Subject</th>
+                  <th className="py-3 px-4">Requester</th>
+                  <th className="py-3 px-4">Department</th>
+                  <th className="py-3 px-4">Priority</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4">Created</th>
+                  <th className="py-3 px-4 text-center">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((t) => {
-                  const slaState = getTicketSLAState(t);
-                  const rowBackground = slaState?.rowBackground || 'transparent';
-                  const rowHoverBackground = slaState?.rowHoverBackground || 'var(--color-surface2)';
-                  return (
-                    <tr
-                      key={t._id}
-                      className="border-b transition-colors"
-                      style={{ borderColor: 'var(--color-border)', background: rowBackground }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = rowHoverBackground)}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = rowBackground)}
-                    >
-                    <td className="py-3.5 px-4 font-mono font-semibold" style={{ color: 'var(--color-accent)' }}>
+                {filtered.map((t) => (
+                  <tr
+                    key={t._id}
+                    className="transition-colors"
+                    style={{ borderBottom: '1px solid var(--color-border)' }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--color-surface2)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <td className="py-3 px-4 font-mono font-bold" style={{ color: 'var(--color-accent)' }}>
                       <Link to={`/tickets/${t._id}`} className="hover:underline">
                         {t.ticketNumber}
                       </Link>
                     </td>
-                    <td className="py-3.5 px-4 font-medium max-w-xs truncate" style={{ color: 'var(--color-text)' }}>
+                    <td className="py-3 px-4 font-semibold max-w-xs truncate" style={{ color: 'var(--color-text)' }}>
                       <Link to={`/tickets/${t._id}`} className="hover:opacity-75">
                         {t.subject}
                       </Link>
                     </td>
-                    <td className="py-3.5 px-4 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                    <td className="py-3 px-4" style={{ color: 'var(--color-text-muted)' }}>
                       {t.requester?.name || 'N/A'}
                     </td>
-                    <td className="py-3.5 px-4">
+                    <td className="py-3 px-4" style={{ color: 'var(--color-text-muted)' }}>
+                      {t.department?.name || 'General'}
+                    </td>
+                    <td className="py-3 px-4">
                       <Badge type="priority" value={t.priority} />
                     </td>
-                    <td className="py-3.5 px-4">
-                      <TicketSLAStatus ticket={t} compact />
-                    </td>
-                    <td className="py-3.5 px-4">
+                    <td className="py-3 px-4">
                       <select
                         value={t.status}
                         disabled={updating[t._id]}
                         onChange={(e) => handleStatusChange(t._id, e.target.value)}
-                        className="text-xs px-2 py-1 rounded-lg border outline-none cursor-pointer font-medium min-w-[120px]"
+                        className="text-xs px-2 py-1 rounded border outline-none cursor-pointer font-medium"
                         style={{ background: 'var(--input-bg)', borderColor: 'var(--input-border)', color: 'var(--input-text)' }}
                       >
                         {STATUS_OPTIONS.map((s) => (
@@ -198,24 +193,21 @@ export default function AgentMyTickets() {
                         <span className="ml-2 text-[10px] text-indigo-400 animate-pulse">saving...</span>
                       )}
                     </td>
-                    <td className="py-3.5 px-4 text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                      {t.department?.name || 'General'}
-                    </td>
-                    <td className="py-3.5 px-4 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                    <td className="py-3 px-4" style={{ color: 'var(--color-text-muted)' }}>
                       {new Date(t.createdAt).toLocaleDateString()}
                     </td>
-                    <td className="py-3.5 px-4 text-center">
+                    <td className="py-3 px-4 text-center">
                       <Link
                         to={`/tickets/${t._id}`}
-                        className="inline-flex items-center gap-1 p-1.5 rounded bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 transition-colors"
+                        className="p-1.5 rounded-lg inline-flex items-center justify-center transition-colors hover:bg-slate-500/10"
+                        style={{ color: 'var(--color-text-muted)' }}
                         title="View Full Details"
                       >
-                        <Eye className="w-3.5 h-3.5" />
+                        <Eye className="w-4 h-4" />
                       </Link>
                     </td>
-                    </tr>
-                  );
-                })}
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

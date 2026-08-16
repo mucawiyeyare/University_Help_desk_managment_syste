@@ -207,48 +207,42 @@ export default function AdminTickets() {
                   <th className="py-3 px-4">Ticket #</th>
                   <th className="py-3 px-4">Subject</th>
                   <th className="py-3 px-4">Requester</th>
+                  <th className="py-3 px-4">Department</th>
                   <th className="py-3 px-4">Priority</th>
-                  <th className="py-3 px-4">SLA</th>
                   <th className="py-3 px-4">Status</th>
                   <th className="py-3 px-4">Assigned Agent</th>
-                  <th className="py-3 px-4">Dept</th>
                   <th className="py-3 px-4 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {tickets.map((t) => {
-                  const slaState = getTicketSLAState(t);
-                  const assignmentState = getTicketAssignmentState(t);
-                  const rowBackground = slaState?.rowBackground || assignmentState?.rowBackground || 'transparent';
-                  const rowHoverBackground = slaState?.rowHoverBackground || assignmentState?.rowHoverBackground || 'rgba(99,102,241,0.05)';
-                  return (
+                {tickets.map((t) => (
                   <tr
                     key={t._id}
-                    className="border-b transition-colors"
-                    style={{ borderColor: 'var(--color-border)', background: rowBackground }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = rowHoverBackground)}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = rowBackground)}
+                    className="transition-colors"
+                    style={{ borderBottom: '1px solid var(--color-border)' }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--color-surface2)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                   >
-                    <td className="py-3 px-4 font-mono font-bold text-indigo-400">
+                    <td className="py-3 px-4 font-mono font-bold" style={{ color: 'var(--color-accent)' }}>
                       <Link to={`/tickets/${t._id}`} className="hover:underline">{t.ticketNumber}</Link>
                     </td>
-                    <td className="py-3 px-4 font-medium max-w-xs truncate" style={{ color: 'var(--color-text)' }}>
-                      <Link to={`/tickets/${t._id}`}>{t.subject}</Link>
+                    <td className="py-3 px-4 font-semibold max-w-xs truncate" style={{ color: 'var(--color-text)' }}>
+                      <Link to={`/tickets/${t._id}`} className="hover:opacity-75">{t.subject}</Link>
                     </td>
                     <td className="py-3 px-4" style={{ color: 'var(--color-text-muted)' }}>
                       {t.requester?.name || 'Unknown'}
+                    </td>
+                    <td className="py-3 px-4" style={{ color: 'var(--color-text-muted)' }}>
+                      {t.department?.name || 'General'}
                     </td>
                     <td className="py-3 px-4">
                       <Badge type="priority" value={t.priority} />
                     </td>
                     <td className="py-3 px-4">
-                      <TicketSLAStatus ticket={t} compact />
-                    </td>
-                    <td className="py-3 px-4">
                       <select
                         value={t.status}
                         onChange={(e) => handleQuickStatusChange(t._id, e.target.value)}
-                        className="text-xs px-2 py-0.5 rounded border outline-none cursor-pointer"
+                        className="text-xs px-2 py-1 rounded border outline-none cursor-pointer font-medium"
                         style={{ background: 'var(--input-bg)', borderColor: 'var(--input-border)', color: 'var(--input-text)' }}
                       >
                         <option value="new">New</option>
@@ -259,44 +253,41 @@ export default function AdminTickets() {
                         <option value="closed">Closed</option>
                       </select>
                     </td>
-                    <td className="py-3 px-4 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                    <td className="py-3 px-4 text-xs">
                       {t.assignedAgent?.name ? (
-                        <span className="text-emerald-400 font-medium">{t.assignedAgent.name}</span>
+                        <span className="font-semibold" style={{ color: '#0F7D4B' }}>{t.assignedAgent.name}</span>
                       ) : (
-                        <span className="italic text-rose-400 font-semibold">Unassigned</span>
+                        <span className="italic text-amber-500 font-medium">Unassigned</span>
                       )}
                     </td>
-                    <td className="py-3 px-4 text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                      {t.department?.name || '-'}
-                    </td>
                     <td className="py-3 px-4 text-center">
-                      <div className="flex items-center justify-center gap-1.5">
+                      <div className="flex items-center justify-center gap-1">
                         <Link
                           to={`/tickets/${t._id}`}
                           title="View Detail"
-                          className="p-1.5 rounded bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20"
+                          className="p-1.5 rounded-lg transition-colors hover:bg-slate-500/10"
+                          style={{ color: 'var(--color-text-muted)' }}
                         >
-                          <Eye className="w-3.5 h-3.5" />
+                          <Eye className="w-4 h-4" />
                         </Link>
                         <button
                           onClick={() => openAssignModal(t)}
                           title="Assign Agent/Dept"
-                          className="p-1.5 rounded bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"
+                          className="p-1.5 rounded-lg transition-colors text-amber-500 hover:bg-amber-500/10"
                         >
-                          <UserCheck className="w-3.5 h-3.5" />
+                          <UserCheck className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDelete(t._id, t.ticketNumber)}
                           title="Delete Ticket"
-                          className="p-1.5 rounded bg-rose-500/10 text-rose-400 hover:bg-rose-500/20"
+                          className="p-1.5 rounded-lg transition-colors hover:bg-rose-500/10 text-rose-500"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
                   </tr>
-                  );
-                })}
+                ))}
               </tbody>
             </table>
           </div>
