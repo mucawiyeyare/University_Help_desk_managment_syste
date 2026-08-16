@@ -23,8 +23,18 @@ export default function DocumentViewerModal({ attachment, isOpen, onClose }) {
   const [error, setError] = useState(null);
   const [zoomLevel, setZoomLevel] = useState(100);
 
-  const fileUrl = attachment?.filename ? `http://localhost:5000/uploads/${attachment.filename}` : '';
-  const filename = attachment?.originalName || attachment?.filename || 'Document';
+  const getFileUrl = () => {
+    if (!attachment) return '';
+    if (attachment.url) return attachment.url;
+    if (typeof attachment.path === 'string' && (attachment.path.startsWith('http://') || attachment.path.startsWith('https://'))) {
+      return attachment.path;
+    }
+    const fname = attachment.filename || attachment.name || (typeof attachment.path === 'string' ? attachment.path.split(/[/\\]/).pop() : '');
+    return fname ? `/uploads/${fname}` : '';
+  };
+
+  const fileUrl = getFileUrl();
+  const filename = attachment?.originalName || attachment?.filename || attachment?.name || 'Document';
   const ext = filename.split('.').pop().toLowerCase();
 
   const isDocx = ['docx', 'doc'].includes(ext);
@@ -33,7 +43,7 @@ export default function DocumentViewerModal({ attachment, isOpen, onClose }) {
   const isText = ['txt', 'csv', 'json', 'log', 'md', 'js', 'html', 'css'].includes(ext);
 
   useEffect(() => {
-    if (!isOpen || !attachment) return;
+    if (!isOpen || !attachment || !fileUrl) return;
 
     setLoading(true);
     setError(null);
@@ -58,7 +68,7 @@ export default function DocumentViewerModal({ attachment, isOpen, onClose }) {
         }
       } catch (err) {
         console.error('Error rendering preview:', err);
-        setError('Unable to parse inline text view. You can view in a new browser tab.');
+        setError('Unable to parse inline text view. You can view or download the file directly.');
       } finally {
         setLoading(false);
       }

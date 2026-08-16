@@ -18,16 +18,17 @@ const emailShell = (title, bodyContent) => `
 
           <!-- Branded Header with Logo -->
           <tr>
-            <td style="background:linear-gradient(135deg,#15803d 0%,#166534 100%);padding:26px 24px;text-align:center;">
-              <table align="center" cellpadding="0" cellspacing="0" style="margin:0 auto 12px auto;">
+            <td bgcolor="#15803d" style="background-color:#15803d;padding:26px 20px;text-align:center;">
+              <table align="center" border="0" cellpadding="0" cellspacing="0" style="margin:0 auto 12px auto;">
                 <tr>
-                  <td style="background:#ffffff;padding:6px 12px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.15);text-align:center;">
+                  <td align="center" bgcolor="#ffffff" style="background-color:#ffffff;padding:8px 14px;border-radius:12px;">
                     <img
-                      src="https://huhelpdesk.iftiinhub.com/hormuud-logo.png"
-                      alt="Hormuud University"
-                      width="54"
-                      height="64"
-                      style="display:block;margin:0 auto;width:54px;height:auto;border:0;outline:none;text-decoration:none;"
+                      src="https://raw.githubusercontent.com/mucawiyeyare/University_Help_desk_managment_syste/main/frontend/public/hormuud-logo.png"
+                      alt="Hormuud University Logo"
+                      width="58"
+                      height="68"
+                      border="0"
+                      style="display:block;margin:0 auto;width:58px;max-width:58px;height:auto;border:0;outline:none;text-decoration:none;"
                     />
                   </td>
                 </tr>
