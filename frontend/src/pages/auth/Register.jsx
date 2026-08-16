@@ -125,24 +125,11 @@ export default function Register() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold mb-1.5" style={{ color: isDark ? '#B8D7C0' : '#285136' }}>User Type</label>
-                <select value={formData.requesterType} onChange={set('requesterType')}
-                  className="w-full rounded-xl px-3 py-2.5 text-xs outline-none focus:ring-2 focus:ring-emerald-600/30 focus:border-emerald-600"
-                  style={inputStyle}>
-                  <option value="student">Student</option>
-                  <option value="lecturer">Lecturer</option>
-                  <option value="staff">Staff</option>
-                  <option value="external">External User</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold mb-1.5" style={{ color: isDark ? '#B8D7C0' : '#285136' }}>Phone (Optional)</label>
-                <input type="text" value={formData.phone} onChange={set('phone')} placeholder="+1 555 000"
-                  className="w-full rounded-xl px-3 py-2.5 text-xs outline-none focus:ring-2 focus:ring-emerald-600/30 focus:border-emerald-600"
-                  style={inputStyle} />
-              </div>
+            <div>
+              <label className="block text-xs font-semibold mb-1.5" style={{ color: isDark ? '#B8D7C0' : '#285136' }}>Phone (Optional)</label>
+              <input type="text" value={formData.phone} onChange={set('phone')} placeholder="+252 61 000 0000"
+                className="w-full rounded-xl px-3 py-2.5 text-xs outline-none focus:ring-2 focus:ring-emerald-600/30 focus:border-emerald-600"
+                style={inputStyle} />
             </div>
 
             <div>
